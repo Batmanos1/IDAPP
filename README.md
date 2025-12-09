@@ -7,8 +7,6 @@ The robots are still a work in progress and therefore still private. The app is 
 
 ### 🔗 **Live App:** [https://batmanos1.github.io/IDAPP/](https://batmanos1.github.io/IDAPP/)
 
-![IDAPP Icon](icon.png)
-
 ## ✨ Key Features
 
 * **Web Bluetooth Connectivity:** Connects directly from Chrome, Edge, or Bluefy to an ESP32 microcontroller without a backend server.
@@ -59,10 +57,4 @@ IDAPP communicates using a custom ASCII protocol over BLE UART.
 
 ## 📜 License
 
-**Current Status: Source Available / Proprietary**
-
-This project is licensed under the **Business Source License 1.1**. 
-* **Now:** You may view and use the code for personal, non-commercial purposes. You may not sell this app or use it in a commercial product.
-* **Future:** this project will most likely convert to the standard **MIT Open Source License** when the robot files are bublished.
-
-See the [LICENSE](LICENSE) file for details.
+This project is open-source and available under the **GNU General Public License v3.0**. See the [LICENSE](LICENSE) file for details.
