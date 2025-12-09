@@ -2,20 +2,20 @@
 
 **IDAPP** is a futuristic Progressive Web App (PWA) designed to act as the extended nervous system and remote controller for the **IDC** robots. It connects directly via **Web Bluetooth**, requiring no app store installation, and features a "Living UI" that synchronizes with the robot's emotional state.
 
-## 🛠️ Keep in mind ! ! !
+## Keep in mind ! ! !
 The robots are still a work in progress and therefore still private. The app is useless without them.
 
-### 🔗 **Live App:** [https://batmanos1.github.io/IDAPP/](https://batmanos1.github.io/IDAPP/)
+### **Live App:** [https://batmanos1.github.io/IDAPP/](https://batmanos1.github.io/IDAPP/)
 
-## ✨ Key Features
+## Key Features
 
 * **Web Bluetooth Connectivity:** Connects directly from Chrome, Edge, or Bluefy to an ESP32 microcontroller without a backend server.
-* **Mood Sync Technology:** The entire application theme (colors, animations, and the "Aurora" background) shifts instantly to match the robot's internal emotion (Happy, Angry, Tired, Love).
+* **Mood Sync:** The entire application theme (colors, animations, and the "Aurora" background) shifts instantly to match the robot's internal emotion (Happy, Angry, Tired, Love).
 * **Real-Time Vitals:** Monitors the robot's Happiness, Hunger, and Energy levels.
 * **Game Console:** Launches and controls minigames running on the robot.
 * **PWA Core:** Installable to the home screen on iOS and Android with full-screen support (handles notches and dynamic islands natively).
 
-## 🚀 Installation & Usage
+## Installation & Usage
 
 ### 1. Open the App
 Navigate to [https://batmanos1.github.io/IDAPP/](https://batmanos1.github.io/IDAPP/) on a Bluetooth-enabled device (Smartphone, Tablet, or Laptop).
@@ -31,7 +31,7 @@ For the best experience (Full Screen, No URL bar), install IDAPP as a PWA:
 3.  Select **"Robot's model"** from the browser's Bluetooth pairing menu.
 4.  Once connected, the background will come alive!
 
-## 🔵 Bluetooth Protocol
+## Bluetooth Protocol
 
 IDAPP communicates using a custom ASCII protocol over BLE UART.
 
