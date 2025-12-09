@@ -1,4 +1,4 @@
-# IDAPP: Universal Controller for ESP32 robots
+# IDAPP: Universal Controller for I.D.C. (ESP32) robots
 
 **IDAPP** is a futuristic Progressive Web App (PWA) designed to act as the extended nervous system and remote controller for the **IDC** robots. It connects directly via **Web Bluetooth**, requiring no app store installation, and features a "Living UI" that synchronizes with the robot's emotional state.
 
