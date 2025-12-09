@@ -5,13 +5,10 @@
 }
         
 body {
-    background: var(--bg); 
-    color: var(--c);
+    background: var(--bg); color: var(--c);
     font-family: 'Courier New', monospace;
-    text-align: center; 
-    margin: 0;
-    overflow: hidden; 
-    touch-action: none; /* Disables browser zooming/panning */
+    text-align: center; margin: 0;
+    overflow: hidden; touch-action: none;
     overscroll-behavior-y: none;
     user-select: none; -webkit-user-select: none;
     min-height: 100vh; min-height: 100dvh; 
@@ -30,11 +27,8 @@ body.offline #status.on { color: #666; text-shadow: none; }
 body.offline .btn-eye { box-shadow: none; background: #666; }
 body.offline .btn-round { border-color: #333; }
 body.offline .eye { opacity: 0.8; }
-
-/* HIDE VITALS WHILE OFFLINE */
-body.offline .stats-content { opacity: 0.3; pointer-events: none; filter: grayscale(100%); }
-/* Alternatively, to completely hide: */
-/* body.offline .stats-content { display: none; } */
+/* Hides Vitals section to prevent offline viewing */
+body.offline .stats-content { opacity: 0.3; pointer-events: none; filter: grayscale(100%); } 
 
 
 /* --- THE LIVING HEARTBEAT AURORA --- */
@@ -92,42 +86,36 @@ h1 { margin: 10px 0; text-shadow: 0 0 10px var(--glow); letter-spacing: 2px; fon
 #status { font-size: 10px; color: #555; margin-bottom: 10px; transition: color 0.3s; }
 #status.on { color: var(--c); text-shadow: 0 0 8px var(--glow); }
 
-/* DYNAMIC VISOR CONTAINER */
-.visor-container { 
-    position: relative; 
-    width: 100%; 
-    display: flex; justify-content: center; align-items: center; 
-    min-height: 120px; 
-}
-
-/* THE VISOR ITSELF (Dynamically Resized by JS) */
+.visor-container { position: relative; width: 100%; display: flex; justify-content: center; align-items: center; min-height: 120px; }
 .visor { 
     min-width: 100px; min-height: 50px;
-    position: relative; 
-    background: rgba(10,10,10,0.6); 
-    border-radius: 30px; 
-    border: 1px solid rgba(255,255,255,0.1); 
+    position: relative; background: rgba(10,10,10,0.6); 
+    border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); 
     transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-    box-shadow: 0 0 20px rgba(0,0,0,0.3); 
-    backdrop-filter: blur(10px); 
+    box-shadow: 0 0 20px rgba(0,0,0,0.3); backdrop-filter: blur(10px); 
 }
 
-/* EYES (Centered Logic) */
 .eye { 
-    position: absolute; 
-    background: var(--c); 
-    box-shadow: 0 0 15px var(--c); 
-    transition: all 0.5s ease; 
-    transform: translate(-50%, -50%); 
+    position: absolute; background: var(--c); box-shadow: 0 0 15px var(--c); 
+    transition: all 0.5s ease; transform: translate(-50%, -50%); 
 }
 
-/* MOOD OVERLAYS */
+/* --- MOOD ANIMATIONS --- */
+
+/* ANGRY: Slanted top lids */
 .mood-angry .eye { clip-path: polygon(0% 20%, 100% 0%, 100% 100%, 0% 100%); }
+
+/* HAPPY: Arched bottom lids (Cheek Push) */
+/* Cuts the bottom 30% of the eye in a V shape to simulate the lid pushing up */
+.mood-happy .eye { 
+    clip-path: polygon(0 0, 100% 0, 100% 70%, 50% 60%, 0 70%);
+}
+
 .mood-tired .eye { transform: translate(-50%, -50%) scaleY(0.3) !important; margin-top: 10px; }
 .mood-sleep .eye { transform: translate(-50%, -50%) scaleY(0.1) !important; background: #444; box-shadow: none; margin-top: 10px; }
 .mood-off .eye { background: #111; box-shadow: none; opacity: 0.2; }
 
-/* LOVE MODE */
+/* LOVE: Heart Throb */
 .mood-love .eye {
     border-radius: 0 !important; background-color: var(--c);
     -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 4.248c-3.148-5.402-12-3.825-12 2.944 0 4.661 5.571 9.427 12 15.808 6.43-6.381 12-11.147 12-15.808 0-6.792-8.875-8.206-12-2.944z'/%3E%3C/svg%3E");
@@ -163,7 +151,6 @@ h1 { margin: 10px 0; text-shadow: 0 0 10px var(--glow); letter-spacing: 2px; fon
 .stop-btn { color: #ff0055 !important; border-top: 1px solid #ff0055; margin-top: 10px; justify-content: center; font-weight: bold;}
 .close-txt { margin-top: 20px; text-decoration: underline; color: #666; cursor: pointer; letter-spacing: 2px; }
 
-/* FIX: Smaller Switch for Sound */
 .switch { position: relative; display: inline-block; width: 34px; height: 18px; margin-left: 10px; }
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 20px; }
