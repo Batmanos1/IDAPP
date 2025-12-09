@@ -16,7 +16,21 @@ body {
 }
 
 /* --- OFFLINE STATE (DIMMED/GRAYSCALE) --- */
+/* This must be stronger than :root defaults */
 body.offline {
+    --c: #444444 !important;
+    --glow: #000000 !important;
+    color: #666 !important; /* Force text grey */
+}
+body.offline #nebula-bg::after { opacity: 0 !important; }
+body.offline #status.on { color: #666; text-shadow: none; }
+body.offline .btn-eye { box-shadow: none; background: #666; }
+body.offline .btn-round { border-color: #333; color: #555; box-shadow: none; text-shadow: none; }
+body.offline .eye { opacity: 0.8; background: #555 !important; box-shadow: none !important; }
+
+/* Hides Vitals section to prevent offline viewing */
+body.offline .stats-content { opacity: 0; pointer-events: none; transition: opacity 0.5s; } 
+
     /* Set all neon colors to dim grey until connected */
     --c: #444444 !important;
     --glow: #000000 !important;
