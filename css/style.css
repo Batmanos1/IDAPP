@@ -1,7 +1,7 @@
 :root { 
     --c: #00e5ff; --p: #ff0055; --g: #00ff88; --y: #ffaa00; --v: #aa00ff; --love: #ff69b4; 
     --bg: #050505; --glow: #00e5ff; 
-    --speed: 10s; 
+    --beat-speed: 2s; /* Default heartbeat speed */
 }
         
 body {
@@ -9,93 +9,105 @@ body {
     font-family: 'Courier New', monospace;
     text-align: center; margin: 0;
     overflow: hidden; touch-action: none;
+    overscroll-behavior-y: none;
     user-select: none; -webkit-user-select: none;
-    min-height: 100vh;
+    min-height: 100vh; min-height: 100dvh; 
     transition: color 0.5s ease;
 }
 
-/* --- NEW: LIVING AURORA BORDER EFFECT --- */
-#nebula-bg { 
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-    z-index: -1; pointer-events: none; overflow: hidden; background: var(--bg); 
-}
+/* --- THE LIVING HEARTBEAT AURORA --- */
+#nebula-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; overflow: hidden; background: var(--bg); }
 
-/* The Rotating Gradient Layer */
 #nebula-bg::after {
-    content: '';
-    position: absolute;
+    content: ''; position: absolute; 
     top: -50%; left: -50%; width: 200%; height: 200%;
     
-    /* Conic Gradient creates a smooth sweep of color around the center */
-    background: conic-gradient(
-        from 0deg, 
-        transparent 0%, 
-        var(--c) 20%, 
-        var(--p) 40%, 
-        transparent 60%, 
-        var(--y) 80%, 
-        transparent 100%
-    );
+    /* Conic Gradient for the color wash */
+    background: conic-gradient(from 0deg, transparent 0%, var(--c) 20%, var(--p) 40%, transparent 60%, var(--y) 80%, transparent 100%);
     
-    /* Heavy blur melts it into a glow */
-    filter: blur(60px);
-    opacity: 0; /* Hidden by default (Offline) */
+    filter: blur(50px); opacity: 0; 
     
-    /* Animation */
-    animation: spin-aurora var(--speed) linear infinite;
+    /* NEW: Beat Animation instead of Spin */
+    transform-origin: center;
+    animation: beat-fade var(--beat-speed) ease-in-out infinite;
     transition: opacity 2s ease, filter 1s ease;
 }
 
-/* The "Vignette" to keep the center readable */
 #nebula-bg::before {
-    content: '';
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: radial-gradient(circle at center, var(--bg) 30%, transparent 90%);
-    z-index: 1;
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: radial-gradient(circle at center, var(--bg) 30%, transparent 90%); z-index: 1;
 }
 
-/* --- "ALIVE" STATE (Triggered via JS on Connect) --- */
-#nebula-bg.alive::after {
-    opacity: 0.6; /* Lights come on */
-    filter: blur(80px); /* Maximizes the "wash" effect */
+#nebula-bg.alive::after { opacity: 0.5; }
+
+/* HEARTBEAT KEYFRAMES */
+@keyframes beat-fade {
+    0% { transform: scale(1); opacity: 0.4; }
+    50% { transform: scale(1.15); opacity: 0.6; } /* The "Thump" */
+    100% { transform: scale(1); opacity: 0.4; }
 }
 
-@keyframes spin-aurora {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+/* MOOD SETTINGS (Colors & Heartbeat Speed) */
+body.mood-happy { --glow: #00ff88; --c: #00ff88; --beat-speed: 1.5s; } /* Steady, happy beat */
+body.mood-angry { --glow: #ff0000; --c: #ff0055; --beat-speed: 0.4s; } /* Fast, racing heart */
+body.mood-tired { --glow: #5500ff; --c: #aa00ff; --beat-speed: 4s; }   /* Slow, sleepy beat */
+body.mood-sleep { --glow: #222222; --c: #444; --beat-speed: 6s; }      /* Deep sleep */
+body.mood-love { --glow: #ff1493; --c: #ff69b4; --beat-speed: 1.2s; }  /* Strong, deep throb */
+
+#app-container { height: 200vh; height: 200dvh; transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.page { 
+    height: 100vh; height: 100dvh; width: 100%; box-sizing: border-box; 
+    padding-top: calc(20px + env(safe-area-inset-top)); padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);
+    display: flex; flex-direction: column; justify-content: space-between; position: relative; z-index: 2; 
 }
 
-/* MOOD VARIABLES */
-body.mood-happy { --glow: #00ff88; --c: #00ff88; --speed: 8s; } 
-body.mood-angry { --glow: #ff0000; --c: #ff0055; --speed: 1.5s; } /* Fast spin! */
-body.mood-tired { --glow: #5500ff; --c: #aa00ff; --speed: 30s; } /* Slow lazy spin */
-body.mood-sleep { --glow: #222222; --c: #444; --speed: 60s; } 
-body.mood-love { --glow: #ff1493; --c: #ff69b4; --speed: 5s; }
-
-#app-container { height: 200vh; transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.page { height: 100vh; width: 100%; box-sizing: border-box; padding-top: 20px; display: flex; flex-direction: column; justify-content: space-between; position: relative; z-index: 2; }
 h1 { margin: 10px 0; text-shadow: 0 0 10px var(--glow); letter-spacing: 2px; font-size: 28px; transition: 0.5s; }
 .subtitle { font-size: 12px; color: #666; letter-spacing: 1px; margin-top: -5px; }
 #status { font-size: 10px; color: #555; margin-bottom: 10px; transition: color 0.3s; }
 #status.on { color: var(--c); text-shadow: 0 0 8px var(--glow); }
 
-/* VISOR */
-.visor-container { position: relative; width: 220px; margin: 0 auto; }
-.visor { height: 80px; display: flex; align-items: center; justify-content: center; gap: 12px; background: rgba(10,10,10,0.6); border-radius: 40px; border: 1px solid rgba(255,255,255,0.1); transition: 0.3s; box-shadow: 0 0 20px rgba(0,0,0,0.3); backdrop-filter: blur(10px); }
-.eye { background: var(--c); border-radius: 50%; box-shadow: 0 0 15px var(--c); transition: all 0.5s ease; }
-.eye.small { width: 25px; height: 25px; } .eye.big { width: 35px; height: 35px; }
+/* DYNAMIC VISOR CONTAINER */
+.visor-container { 
+    position: relative; 
+    width: 100%; 
+    display: flex; justify-content: center; align-items: center; 
+    min-height: 120px; /* Reserve space */
+}
 
-/* MOOD SHAPES */
-.mood-happy .eye { border-radius: 50% 50% 10% 10%; margin-top: 10px; }
-.mood-angry .eye:nth-child(-n+2) { clip-path: polygon(0% 20%, 100% 0%, 100% 100%, 0% 100%); }
-.mood-angry .eye:nth-child(n+3) { clip-path: polygon(0% 0%, 100% 20%, 100% 100%, 0% 100%);}
-.mood-tired .eye { height: 10px !important; margin-top: 10px; border-radius: 4px; }
-.mood-sleep .eye { height: 4px !important; width: 30px !important; border-radius: 2px; background: #444; box-shadow: none; margin-top: 10px; }
-.mood-off .eye { background: #111; box-shadow: none; height: 10px; width: 10px; opacity: 0.2; }
+/* THE VISOR ITSELF (Now Resizes Dynamically) */
+.visor { 
+    /* Default size, overridden by JS */
+    min-width: 100px; min-height: 50px;
+    
+    position: relative; 
+    background: rgba(10,10,10,0.6); 
+    border-radius: 30px; 
+    border: 1px solid rgba(255,255,255,0.1); 
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Bouncy Resize */
+    box-shadow: 0 0 20px rgba(0,0,0,0.3); 
+    backdrop-filter: blur(10px); 
+}
 
-/* LOVE MODE (Heart Eyes) */
+/* EYES (Centered Logic) */
+.eye { 
+    position: absolute; 
+    background: var(--c); 
+    box-shadow: 0 0 15px var(--c); 
+    transition: all 0.5s ease; 
+    
+    /* Critical: Centers the eye div on its coordinate point */
+    transform: translate(-50%, -50%); 
+}
+
+/* MOOD OVERLAYS */
+.mood-angry .eye { clip-path: polygon(0% 20%, 100% 0%, 100% 100%, 0% 100%); }
+.mood-tired .eye { transform: translate(-50%, -50%) scaleY(0.3) !important; margin-top: 10px; }
+.mood-sleep .eye { transform: translate(-50%, -50%) scaleY(0.1) !important; background: #444; box-shadow: none; margin-top: 10px; }
+.mood-off .eye { background: #111; box-shadow: none; opacity: 0.2; }
+
+/* LOVE MODE */
 .mood-love .eye {
-    width: 35px !important; height: 35px !important;
     border-radius: 0 !important; background-color: var(--c);
     -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 4.248c-3.148-5.402-12-3.825-12 2.944 0 4.661 5.571 9.427 12 15.808 6.43-6.381 12-11.147 12-15.808 0-6.792-8.875-8.206-12-2.944z'/%3E%3C/svg%3E");
     mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 4.248c-3.148-5.402-12-3.825-12 2.944 0 4.661 5.571 9.427 12 15.808 6.43-6.381 12-11.147 12-15.808 0-6.792-8.875-8.206-12-2.944z'/%3E%3C/svg%3E");
@@ -103,7 +115,11 @@ h1 { margin: 10px 0; text-shadow: 0 0 10px var(--glow); letter-spacing: 2px; fon
     box-shadow: none; filter: drop-shadow(0 0 5px var(--glow));
     animation: heart-beat 1s infinite;
 }
-@keyframes heart-beat { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+@keyframes heart-beat { 
+    0% { transform: translate(-50%, -50%) scale(1); } 
+    50% { transform: translate(-50%, -50%) scale(1.1); } 
+    100% { transform: translate(-50%, -50%) scale(1); } 
+}
 
 /* UI ELEMENTS */
 #game-text { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; color: #fff; text-shadow: 0 0 5px #000; background: rgba(0,0,0,0.6); border-radius: 40px; opacity: 0; pointer-events: none; transition: 0.3s; }
@@ -113,12 +129,11 @@ h1 { margin: 10px 0; text-shadow: 0 0 10px var(--glow); letter-spacing: 2px; fon
 .btn-round { width: 85px; height: 85px; border-radius: 50%; background: linear-gradient(145deg, #1a1a1a, #0a0a0a); border: 2px solid #333; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; -webkit-tap-highlight-color: transparent; box-shadow: inset 0 0 10px #000; transition: 0.1s; }
 .btn-round.pressing { transform: scale(0.95); background: #000; border-color: #fff; }
 
-.btn-eye { border-radius: 50%; display: inline-block; background: var(--c); box-shadow: 0 0 5px var(--glow); transition: 0.5s; }
-.btn-eye.b-s { width: 10px; height: 10px; } .btn-eye.b-b { width: 18px; height: 18px; }
+.btn-eye { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: var(--c); box-shadow: 0 0 5px var(--glow); transition: 0.5s; }
+.btn-eye.b-b { width: 18px; height: 18px; }
 .bracket { color: var(--c); font-size: 24px; font-weight: normal; text-shadow: 0 0 5px var(--glow); margin-bottom: 2px; transition: 0.5s; }
 .menu-btn { width: 60px; height: 60px; font-size: 12px; border-color: var(--c); color: var(--c); letter-spacing: 1px; font-weight: bold; transition: 0.5s;}
 
-/* MENUS & BARS */
 #menuModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 100; backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; }
 .menu-box { background: #0a0a0a; border: 2px solid var(--c); box-shadow: 0 0 50px var(--glow); padding: 20px; width: 85%; max-width: 400px; }
 .cat-header { color: var(--c); padding: 12px; margin-top: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--c); font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; text-shadow: 0 0 5px var(--glow); }
