@@ -7,6 +7,7 @@ let robotBaseColor = "#00e5ff";
 // Identity Variables
 let robotShape = 0; 
 let robotRad = 0;   
+// Stretch factors are kept for reference but not applied to dimensions anymore
 let robotStrX = 100;  
 let robotStrY = 100; 
 
@@ -46,14 +47,19 @@ function updateVisorMood(happiness) {
 }
 
 function updateBackgroundVitals(vitals) {
-    document.getElementById('bar-hap').style.width = vitals.hap + '%';
-    document.getElementById('val-hap').innerText = vitals.hap + '%';
+    // Updates UI Bars with safety checks
+    let h = vitals.hap || 0;
+    let u = vitals.hun || 0;
+    let e = vitals.eng || 0;
 
-    document.getElementById('bar-hun').style.width = vitals.hun + '%'; 
-    document.getElementById('val-hun').innerText = vitals.hun + '%';
+    document.getElementById('bar-hap').style.width = h + '%';
+    document.getElementById('val-hap').innerText = h + '%';
 
-    document.getElementById('bar-eng').style.width = vitals.eng + '%';
-    document.getElementById('val-eng').innerText = vitals.eng + '%';
+    document.getElementById('bar-hun').style.width = u + '%'; 
+    document.getElementById('val-hun').innerText = u + '%';
+
+    document.getElementById('bar-eng').style.width = e + '%';
+    document.getElementById('val-eng').innerText = e + '%';
 }
 
 function applyRobotIdentity(dataString) {
@@ -75,13 +81,11 @@ function applyRobotIdentity(dataString) {
 
     document.getElementById('app-title').innerText = rName.toUpperCase();
     
-    // FIX: Update Coins Immediately from Identity Packet
     if(rCoins) {
         document.getElementById('val-coins').innerText = rCoins;
         document.getElementById('coin-box').style.display = 'block';
     }
 
-    // FIX: Apply color and remove dimming only after receiving color data
     if(rColor) {
         robotBaseColor = rColor;
         document.documentElement.style.setProperty('--c', rColor);
@@ -96,20 +100,21 @@ function applyRobotIdentity(dataString) {
         currentVitals.eng = parseInt(parts[11]);
         currentHappiness = currentVitals.hap;
         
-        // Instant Update of Vitals and Mood based on synced data
         updateBackgroundVitals(currentVitals);
         updateVisorMood(currentHappiness);
     }
     
-    // Reset Layout Tracking
+    // Reset Layout Tracking for new eyes
     document.getElementById('visor').innerHTML = '';
     minEyeX = 1000; maxEyeX = -1000;
     minEyeY = 1000; maxEyeY = -1000;
     
-    console.log("Connected to " + rName + " (Hap:" + currentVitals.hap + " Eng:" + currentVitals.eng + ")");
+    console.log("Connected to " + rName);
 }
 
 function addDynamicEye(dataString) {
+    // Protocol: relX, relY, baseW, baseH
+    // Note: baseW/baseH sent by robot ALREADY include the stretch factor.
     let coords = dataString.split(',');
     let xOff = parseInt(coords[0]);
     let yOff = parseInt(coords[1]);
@@ -117,21 +122,14 @@ function addDynamicEye(dataString) {
     let h = parseInt(coords[3]);
 
     const visor = document.getElementById('visor');
-    const scale = 1.6; 
+    const scale = 1.6; // Scale factor for phone screen
 
     let div = document.createElement('div');
     div.className = 'eye';
     
-    // 1. Calculate Dimensions
-    let sW = w * scale;
-    let sH = h * scale;
-    
-    // Apply Stretch factors
-    let sx = robotStrX ? (robotStrX / 100.0) : 1.0;
-    let sy = robotStrY ? (robotStrY / 100.0) : 1.0;
-    
-    let finalW = sW * sx;
-    let finalH = sH * sy;
+    // 1. Calculate Dimensions (No extra stretch math needed)
+    let finalW = w * scale;
+    let finalH = h * scale;
     
     // 2. Position Logic
     let finalX = xOff * scale; 
@@ -139,13 +137,19 @@ function addDynamicEye(dataString) {
 
     div.style.width = finalW + 'px';
     div.style.height = finalH + 'px';
+    // Center alignment
     div.style.left = `calc(50% + ${finalX}px)`;
     div.style.top = `calc(50% + ${finalY}px)`;
 
-    // 3. Shape
+    // 3. Shape Handling
     if(robotShape === 1) { 
-        div.style.borderRadius = (robotRad * 2) + "px"; 
+        // RECTANGLE (Glitch/Monster)
+        // If Radius is 0, it's a sharp square. If >0, rounded.
+        // We multiply radius by scale to match visual size
+        let calcRad = robotRad * scale;
+        div.style.borderRadius = calcRad + "px"; 
     } else {
+        // CIRCLE (Standard/Ghost)
         div.style.borderRadius = "50%";
     }
 
@@ -179,11 +183,13 @@ function updateVisorGeometry() {
     visor.style.width = finalW + "px";
     visor.style.height = finalH + "px";
     
+    // Auto-adjust corners to look nice (pill shape vs box)
     let rad = Math.min(finalW, finalH) / 2;
-    visor.style.borderRadius = rad + "px";
+    // Cap radius at 30px for a "tech" look, unless it's very small
+    visor.style.borderRadius = Math.min(30, rad) + "px";
 }
 
-// ... (Input Handlers) ...
+// ... (Input Handlers - No changes needed) ...
 function btnDown(e, cmd) {
     e.preventDefault(); 
     lastInputTime = Date.now(); 
@@ -221,19 +227,11 @@ function forceSleep() { send('Z'); closeMenu(); document.getElementById('visor')
 let startY = 0;
 const container = document.getElementById('app-container');
 
-// --- SWIPE LOGIC (Unified Touch & Mouse) ---
+// --- SWIPE LOGIC ---
 function handleStart(y) { startY = y; }
-function handleEnd(y) {
-    if (Math.abs(startY - y) > 50) {
-        scrollToPage(startY > y ? 2 : 1);
-    }
-}
-
-// Touch Events
+function handleEnd(y) { if (Math.abs(startY - y) > 50) { scrollToPage(startY > y ? 2 : 1); } }
 document.addEventListener('touchstart', e => handleStart(e.touches[0].clientY), {passive: false});
 document.addEventListener('touchend', e => handleEnd(e.changedTouches[0].clientY), {passive: false});
-
-// Mouse Events (PC Swipe)
 document.addEventListener('mousedown', e => handleStart(e.clientY));
 document.addEventListener('mouseup', e => handleEnd(e.clientY));
 
@@ -270,11 +268,9 @@ function onDisc() {
     document.getElementById('coin-box').style.display = 'none';
     document.getElementById('visor').className = "visor mood-off";
     document.body.className = ""; 
-    document.body.classList.add('offline'); // Dim again
+    document.body.classList.add('offline'); 
     document.getElementById('nebula-bg').classList.remove('alive');
     scrollToPage(1);
-    
-    // Clear dynamic eyes on disconnect
     document.getElementById('visor').innerHTML = '';
 }
 
@@ -289,18 +285,14 @@ function handleUpdate(event) {
     let parts = val.split(':');
     let type = parts[0]; let data = parts[1];
 
-    if (type === 'I') { 
-        applyRobotIdentity(data);
-    }
-    else if (type === 'L') {
-        addDynamicEye(data);
-    }
+    if (type === 'I') { applyRobotIdentity(data); }
+    else if (type === 'L') { addDynamicEye(data); }
     else if (type === 'H') { 
         let scores = data.split(',');
         document.getElementById('hs-mem').innerText = "HS: " + scores[0];
         document.getElementById('hs-ref').innerText = "HS: " + scores[1];
         document.getElementById('hs-slot').innerText = "STRK: " + scores[2];
-        document.getElementById('val-coins').innerText = scores[3]; // Update coin text from query
+        document.getElementById('val-coins').innerText = scores[3]; 
     }
     else if (type === 'T') { 
         let txtDiv = document.getElementById('game-text');
@@ -308,9 +300,8 @@ function handleUpdate(event) {
         if(data.length > 0) txtDiv.classList.add('active'); else txtDiv.classList.remove('active');
         if (data === "GAME OVER" || data === "WINNER!" || data === "LOSE!") { setTimeout(() => { isGameRunning = false; }, 1000); }
     }
-    else if (type === 'C') { document.getElementById('val-coins').innerText = data; } // Update coin text from coin change
+    else if (type === 'C') { document.getElementById('val-coins').innerText = data; }
     else if (type === 'A') { 
-        // This is a direct affection update (single value update)
         currentVitals.hap = parseInt(data);
         currentHappiness = currentVitals.hap;
         updateBackgroundVitals(currentVitals);
@@ -321,12 +312,10 @@ function handleUpdate(event) {
         let v = document.getElementById('visor');
         let b = document.body;
         v.className = "visor"; b.className = ""; 
-        
         if(robotBaseColor) {
              document.documentElement.style.setProperty('--c', robotBaseColor);
              document.documentElement.style.setProperty('--glow', robotBaseColor);
         }
-
         if (num === 1) { v.classList.add('mood-happy'); b.classList.add('mood-happy'); }
         if (num === 2) { v.classList.add('mood-angry'); b.classList.add('mood-angry'); }
         if (num === 3) { v.classList.add('mood-tired'); b.classList.add('mood-tired'); }
