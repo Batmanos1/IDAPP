@@ -62,7 +62,7 @@ function applyRobotIdentity(dataString) {
     // 9:Affection | 10:Hunger | 11:Energy
     
     let parts = dataString.split('|');
-    if (parts.length < 9) return; 
+    if (parts.length < 8) return; 
 
     let rName = parts[1];
     let rCoins = parts[2];
@@ -75,16 +75,15 @@ function applyRobotIdentity(dataString) {
 
     document.getElementById('app-title').innerText = rName.toUpperCase();
     
-    // FIX: Update Coins Immediately
+    // FIX: Update Coins Immediately from Identity Packet
     if(rCoins) {
         document.getElementById('val-coins').innerText = rCoins;
-        // Make sure the coin box is visible (handled in connectBLE but good to ensure)
         document.getElementById('coin-box').style.display = 'block';
     }
 
+    // FIX: Apply color and remove dimming only after receiving color data
     if(rColor) {
         robotBaseColor = rColor;
-        // Apply color immediately and remove "offline" dimming
         document.documentElement.style.setProperty('--c', rColor);
         document.documentElement.style.setProperty('--glow', rColor);
         document.body.classList.remove('offline');
@@ -97,7 +96,7 @@ function applyRobotIdentity(dataString) {
         currentVitals.eng = parseInt(parts[11]);
         currentHappiness = currentVitals.hap;
         
-        // Instant Update
+        // Instant Update of Vitals and Mood based on synced data
         updateBackgroundVitals(currentVitals);
         updateVisorMood(currentHappiness);
     }
@@ -221,8 +220,23 @@ function forceSleep() { send('Z'); closeMenu(); document.getElementById('visor')
 
 let startY = 0;
 const container = document.getElementById('app-container');
-document.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: false});
-document.addEventListener('touchend', e => { if (Math.abs(startY - e.changedTouches[0].clientY) > 50) scrollToPage(startY > e.changedTouches[0].clientY ? 2 : 1); }, {passive: false});
+
+// --- SWIPE LOGIC (Unified Touch & Mouse) ---
+function handleStart(y) { startY = y; }
+function handleEnd(y) {
+    if (Math.abs(startY - y) > 50) {
+        scrollToPage(startY > y ? 2 : 1);
+    }
+}
+
+// Touch Events
+document.addEventListener('touchstart', e => handleStart(e.touches[0].clientY), {passive: false});
+document.addEventListener('touchend', e => handleEnd(e.changedTouches[0].clientY), {passive: false});
+
+// Mouse Events (PC Swipe)
+document.addEventListener('mousedown', e => handleStart(e.clientY));
+document.addEventListener('mouseup', e => handleEnd(e.clientY));
+
 function scrollToPage(p) { container.style.transform = p === 2 ? "translateY(-100vh)" : "translateY(0)"; }
 
 const sUUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
@@ -244,9 +258,6 @@ async function connectBLE() {
         document.getElementById('status').innerText = "ONLINE";
         document.getElementById('status').classList.add('on');
         document.getElementById('connectOverlay').style.display = 'none';
-        document.getElementById('coin-box').style.display = 'block';
-        document.getElementById('visor').classList.remove('mood-off');
-        // Do NOT light up yet. Wait for identity packet to set color.
         
         lastInputTime = Date.now(); 
     } catch (e) { console.log(e); }
@@ -289,7 +300,7 @@ function handleUpdate(event) {
         document.getElementById('hs-mem').innerText = "HS: " + scores[0];
         document.getElementById('hs-ref').innerText = "HS: " + scores[1];
         document.getElementById('hs-slot').innerText = "STRK: " + scores[2];
-        document.getElementById('val-coins').innerText = scores[3]; // Update coin text
+        document.getElementById('val-coins').innerText = scores[3]; // Update coin text from query
     }
     else if (type === 'T') { 
         let txtDiv = document.getElementById('game-text');
@@ -297,8 +308,9 @@ function handleUpdate(event) {
         if(data.length > 0) txtDiv.classList.add('active'); else txtDiv.classList.remove('active');
         if (data === "GAME OVER" || data === "WINNER!" || data === "LOSE!") { setTimeout(() => { isGameRunning = false; }, 1000); }
     }
-    else if (type === 'C') { document.getElementById('val-coins').innerText = data; }
+    else if (type === 'C') { document.getElementById('val-coins').innerText = data; } // Update coin text from coin change
     else if (type === 'A') { 
+        // This is a direct affection update (single value update)
         currentVitals.hap = parseInt(data);
         currentHappiness = currentVitals.hap;
         updateBackgroundVitals(currentVitals);
