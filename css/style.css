@@ -14,20 +14,20 @@ body {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
     z-index: -1; pointer-events: none; overflow: hidden; background: var(--bg); 
     
-    /* MERGED GRADIENTS: One layer, multiple spots */
+    /* MERGED GRADIENTS: Three fixed points define the "random spots" on the screen */
     background-image: 
         radial-gradient(circle at 10% 20%, var(--c) 0%, transparent 25%), 
         radial-gradient(circle at 40% 70%, var(--p) 0%, transparent 30%),
         radial-gradient(circle at 80% 40%, var(--y) 0%, transparent 35%);
-    
-    /* NEW: Add the pulsing animation */
+        
+    /* NEW: Add the efficient pulsing animation */
     animation: pulse-fade var(--speed) ease-in-out infinite alternate;
     opacity: 0.7; /* Initial base opacity */
     filter: blur(25px); /* Set a base blur */
     transition: background 1s ease, filter 0.5s ease, animation-duration 1s ease;
 }
 
-/* NEW: Define a gentle pulsing/flicker animation using opacity and blur */
+/* NEW: Define a gentle pulsing/flicker animation using opacity and blur (High Performance) */
 @keyframes pulse-fade {
     0% { opacity: 0.6; filter: blur(20px); }
     50% { opacity: 0.8; filter: blur(40px); }
@@ -95,3 +95,4 @@ input:checked + .slider:before { transform: translateX(18px); }
 .fill-p { background: #ff0055; box-shadow: 0 0 8px #ff0055; }
 .fill-y { background: #ffaa00; box-shadow: 0 0 8px #ffaa00; }
 .hint { font-size: 10px; color: #444; margin-bottom: 30px; animation: bounce 2s infinite; }
+
