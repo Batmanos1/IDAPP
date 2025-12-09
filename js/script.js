@@ -10,11 +10,14 @@ let robotRad = 0;
 let robotStrX = 100;  
 let robotStrY = 100; 
 
+// Track Layout Bounds for Auto-Sizing
+let minEyeX = 1000, maxEyeX = -1000;
+let minEyeY = 1000, maxEyeY = -1000;
+
 const initialVitalStates = { hap: 50, hun: 80, eng: 10 };
 
 window.addEventListener('load', () => { 
     setInterval(checkIdleStatus, 1000); 
-    // We start with an empty visor. It fills up when connected.
 });
 
 function checkIdleStatus() {
@@ -28,6 +31,7 @@ function updateVisorMood(happiness) {
     let b = document.body;
     v.className = "visor"; b.className = "";
     
+    // Updates mood classes which trigger the CSS Heartbeat changes
     if (happiness >= 90) { v.classList.add('mood-love'); b.classList.add('mood-love'); }
     else if (happiness > 60) { v.classList.add('mood-happy'); b.classList.add('mood-happy'); } 
     else if (happiness < 30) { v.classList.add('mood-angry'); b.classList.add('mood-angry'); }
@@ -48,7 +52,6 @@ function updateBackgroundVitals(vitals) {
     document.getElementById('val-hun').innerText = vitals.hun + '%';
 }
 
-// --- IDENTITY HANDLER (METADATA) ---
 function applyRobotIdentity(dataString) {
     // Protocol: Family | Name | Coins | Color | ShapeType | Radius | StretchX | StretchY
     let parts = dataString.split('|');
@@ -58,29 +61,28 @@ function applyRobotIdentity(dataString) {
     let rCoins = parts[2];
     let rColor = parts[3]; 
     
-    // Store Shape Data Globally for new eyes
     robotShape = parseInt(parts[4]); 
     robotRad = parseInt(parts[5]);   
     robotStrX = parseInt(parts[6]);  
     robotStrY = parseInt(parts[7]); 
 
-    // UI Updates
     document.getElementById('app-title').innerText = rName.toUpperCase();
     if(rCoins) document.getElementById('val-coins').innerText = rCoins;
 
-    // Color Theme
     if(rColor) {
         robotBaseColor = rColor;
         document.documentElement.style.setProperty('--c', rColor);
         document.documentElement.style.setProperty('--glow', rColor);
     }
     
-    // Clear Visor - Prepare for Layout Packets
+    // Reset Layout Tracking
     document.getElementById('visor').innerHTML = '';
+    minEyeX = 1000; maxEyeX = -1000;
+    minEyeY = 1000; maxEyeY = -1000;
+    
     console.log("Connected to " + rName + ". Waiting for layout...");
 }
 
-// --- LAYOUT HANDLER (ADD EYE) ---
 function addDynamicEye(dataString) {
     // Protocol: relX, relY, baseW, baseH
     let coords = dataString.split(',');
@@ -90,52 +92,83 @@ function addDynamicEye(dataString) {
     let h = parseInt(coords[3]);
 
     const visor = document.getElementById('visor');
-    const scale = 1.6; // Scale robot pixels (128x64) to Phone Visor (220x80)
-    const centerX = 110; 
-    const centerY = 40;  
+    const scale = 1.6; // Scale robot pixels (128x64) to Phone Visor (approx 220x80)
 
     let div = document.createElement('div');
     div.className = 'eye';
     
-    // 1. Position & Size
+    // 1. Calculate Dimensions
     let sW = w * scale;
     let sH = h * scale;
-    let sX = centerX + (xOff * scale) - (sW / 2);
-    let sY = centerY + (yOff * scale) - (sH / 2);
     
-    div.style.width = sW + 'px';
-    div.style.height = sH + 'px';
-    div.style.left = sX + 'px';
-    div.style.top = sY + 'px';
-
-    // 2. Apply Shape Geometry (From Identity)
-    if(robotShape === 1) { 
-        div.style.borderRadius = (robotRad * 2) + "px"; 
-    } else {
-        div.style.borderRadius = "50%";
-    }
-
-    // 3. Apply Stretch (Aspect Ratio)
+    // Apply Stretch factors (from Identity)
     let sx = robotStrX ? (robotStrX / 100.0) : 1.0;
     let sy = robotStrY ? (robotStrY / 100.0) : 1.0;
     
-    // Apply stretch by modifying size directly to avoid transform conflicts
-    let finalW = parseFloat(div.style.width) * sx;
-    let finalH = parseFloat(div.style.height) * sy;
+    let finalW = sW * sx;
+    let finalH = sH * sy;
     
-    // Re-center after stretch
-    let currentCenterX = sX + (sW/2);
-    let currentCenterY = sY + (sH/2);
-    
+    // 2. Position Logic (Centered)
+    // We position relative to the CENTER (50% 50%) of the Visor
+    // offset X scaled up
+    let finalX = xOff * scale; 
+    let finalY = yOff * scale;
+
     div.style.width = finalW + 'px';
     div.style.height = finalH + 'px';
-    div.style.left = (currentCenterX - finalW/2) + 'px';
-    div.style.top = (currentCenterY - finalH/2) + 'px';
+    
+    // Using calc() allows us to position relative to center without knowing container size
+    div.style.left = `calc(50% + ${finalX}px)`;
+    div.style.top = `calc(50% + ${finalY}px)`;
+
+    // 3. Shape
+    if(robotShape === 1) { 
+        // RECTANGLE
+        div.style.borderRadius = (robotRad * 2) + "px"; 
+    } else {
+        // CIRCLE
+        div.style.borderRadius = "50%";
+    }
 
     visor.appendChild(div);
+    
+    // 4. Update Visor Geometry Bounds
+    // We track the edges of this eye relative to center 0,0
+    let halfW = finalW / 2;
+    let halfH = finalH / 2;
+    
+    if (finalX - halfW < minEyeX) minEyeX = finalX - halfW;
+    if (finalX + halfW > maxEyeX) maxEyeX = finalX + halfW;
+    if (finalY - halfH < minEyeY) minEyeY = finalY - halfH;
+    if (finalY + halfH > maxEyeY) maxEyeY = finalY + halfH;
+    
+    updateVisorGeometry();
 }
 
-// ... (Input Handlers remain the same) ...
+function updateVisorGeometry() {
+    const visor = document.getElementById('visor');
+    const paddingX = 40; // Space on sides
+    const paddingY = 30; // Space on top/bottom
+    const minW = 100;    // Minimum visual size
+    const minH = 60;
+
+    let contentW = (maxEyeX - minEyeX);
+    let contentH = (maxEyeY - minEyeY);
+    
+    // Calculate new dimensions
+    let finalW = Math.max(minW, contentW + paddingX);
+    let finalH = Math.max(minH, contentH + paddingY);
+    
+    visor.style.width = finalW + "px";
+    visor.style.height = finalH + "px";
+    
+    // Adjust border radius if it gets too tall relative to width
+    // Keep it pill-shaped
+    let rad = Math.min(finalW, finalH) / 2;
+    visor.style.borderRadius = rad + "px";
+}
+
+// ... (Standard Input/BLE Handlers below) ...
 function btnDown(e, cmd) {
     e.preventDefault(); 
     lastInputTime = Date.now(); 
