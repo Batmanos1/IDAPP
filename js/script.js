@@ -8,7 +8,7 @@ const initialVitalStates = { hap: 50, hun: 80, eng: 10 };
 
 window.addEventListener('load', () => { 
     setInterval(checkIdleStatus, 1000); 
-    // We don't need updateBackgroundVitals initially anymore, CSS handles defaults
+    // Initial UI sync handled by CSS default classes now
 });
 
 function checkIdleStatus() {
@@ -29,9 +29,7 @@ function updateVisorMood(happiness) {
 }
 
 function updateBackgroundVitals(vitals) {
-    // This function used to redraw the background.
-    // Now, we update the status bars, but the background "Aurora" 
-    // is controlled purely by CSS variables in the mood classes.
+    // Updates status bars. Background aurora is now CSS-driven.
     document.getElementById('bar-hap').style.width = vitals.hap + '%';
     document.getElementById('bar-eng').style.width = (100 - vitals.eng) + '%';
     document.getElementById('val-eng').innerText = (100 - vitals.eng) + '%';
