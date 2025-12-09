@@ -8,7 +8,7 @@ const initialVitalStates = { hap: 50, hun: 80, eng: 10 };
 
 window.addEventListener('load', () => { 
     setInterval(checkIdleStatus, 1000); 
-    updateBackgroundVitals(initialVitalStates);
+    // We don't need updateBackgroundVitals initially anymore, CSS handles defaults
 });
 
 function checkIdleStatus() {
@@ -21,82 +21,50 @@ function updateVisorMood(happiness) {
     let v = document.getElementById('visor');
     let b = document.body;
     v.className = "visor"; b.className = "";
-    if (happiness > 60) { v.classList.add('mood-happy'); b.classList.add('mood-happy'); } 
+    
+    // Updates global theme based on happiness
+    if (happiness >= 90) { v.classList.add('mood-love'); b.classList.add('mood-love'); }
+    else if (happiness > 60) { v.classList.add('mood-happy'); b.classList.add('mood-happy'); } 
     else if (happiness < 30) { v.classList.add('mood-angry'); b.classList.add('mood-angry'); }
 }
 
 function updateBackgroundVitals(vitals) {
-    let nebula = document.getElementById('nebula-bg');
-    let hapSize = vitals.hap;
-    let hunSize = vitals.hun;
-    let engSize = 100 - vitals.eng;
-
-    nebula.style.backgroundImage = `
-        radial-gradient(circle at 15% 15%, var(--c), transparent ${hapSize + 20}px),
-        radial-gradient(circle at 85% 85%, var(--p), transparent ${hunSize + 10}px),
-        radial-gradient(circle at 50% 50%, var(--y), transparent ${engSize + 15}px)
-    `;
-
+    // This function used to redraw the background.
+    // Now, we update the status bars, but the background "Aurora" 
+    // is controlled purely by CSS variables in the mood classes.
     document.getElementById('bar-hap').style.width = vitals.hap + '%';
     document.getElementById('bar-eng').style.width = (100 - vitals.eng) + '%';
     document.getElementById('val-eng').innerText = (100 - vitals.eng) + '%';
 }
 
-
-// --- BUTTON LOGIC: TAP vs DOUBLE TAP vs HOLD ---
 function btnDown(e, cmd) {
     e.preventDefault(); 
     lastInputTime = Date.now(); 
     let state = btnState[cmd];
-    
-    // 1. If currently in hold-repeat, ignore new down presses
     if (state.repeat) return; 
-
     document.getElementById('btn-' + cmd).classList.add('pressing');
 
-    if (isGameRunning) {
-        send(cmd);
-        return;
-    }
+    if (isGameRunning) { send(cmd); return; }
     
     state.tapCount++;
-
     if (state.tapCount === 1) {
-        // Single Tap/Start Hold
         send(cmd);
-        
-        // Set timer to distinguish single tap from hold/double tap
         state.tapTimer = setTimeout(() => {
-            state.tapCount = 0; // Reset tap counter
-            
-            // Start Hold sequence (After 600ms tap window + 200ms grace)
+            state.tapCount = 0; 
             if (document.getElementById('btn-' + cmd).classList.contains('pressing')) {
-                state.repeat = setInterval(() => {
-                    send(cmd);
-                    lastInputTime = Date.now(); 
-                }, 200);
+                state.repeat = setInterval(() => { send(cmd); lastInputTime = Date.now(); }, 200);
             }
-            
-        }, 800); // 800ms total delay before hold starts repeating
-        
+        }, 800); 
     } else if (state.tapCount === 2) {
-        // DOUBLE TAP DETECTED
-        send(cmd); send(cmd); 
-        state.tapCount = 0;
+        send(cmd); send(cmd); state.tapCount = 0;
     }
 }
 
 function btnUp(e, cmd) {
     e.preventDefault();
     lastInputTime = Date.now();
-    
-    // Clear single/double tap timer (if active)
     if (btnState[cmd].tapTimer) { clearTimeout(btnState[cmd].tapTimer); }
-    
-    // Clear continuous hold timer
     if (btnState[cmd].repeat) { clearInterval(btnState[cmd].repeat); btnState[cmd].repeat = null; }
-    
-    // Reset button visual state
     document.getElementById('btn-' + cmd).classList.remove('pressing');
 }
 
@@ -113,14 +81,9 @@ function closeMenu() { document.getElementById('menuModal').style.display = 'non
 
 function toggleCat(id) { 
     const content = document.getElementById('cat-' + id);
-    const arrow = document.getElementById('arrow-' + id);
-    
-    if (content.style.maxHeight) { 
-        content.style.maxHeight = null; 
-    } else { 
+    if (content.style.maxHeight) { content.style.maxHeight = null; } else { 
         let allContent = document.querySelectorAll('.cat-content');
         allContent.forEach(c => c.style.maxHeight = null);
-        
         content.style.maxHeight = content.scrollHeight + "px"; 
     }
 }
@@ -147,11 +110,17 @@ async function connectBLE() {
         let charTX = await svc.getCharacteristic(cTX);
         await charTX.startNotifications();
         charTX.addEventListener('characteristicvaluechanged', handleUpdate);
+        
+        // --- VISUAL CONNECTION EFFECTS ---
         document.getElementById('status').innerText = "ONLINE";
         document.getElementById('status').classList.add('on');
         document.getElementById('connectOverlay').style.display = 'none';
         document.getElementById('coin-box').style.display = 'block';
         document.getElementById('visor').classList.remove('mood-off');
+        
+        // AWAKEN THE AURORA
+        document.getElementById('nebula-bg').classList.add('alive'); 
+        
         lastInputTime = Date.now(); 
     } catch (e) { console.log(e); }
 }
@@ -163,6 +132,10 @@ function onDisc() {
     document.getElementById('coin-box').style.display = 'none';
     document.getElementById('visor').className = "visor mood-off";
     document.body.className = ""; 
+    
+    // KILL THE AURORA
+    document.getElementById('nebula-bg').classList.remove('alive');
+    
     scrollToPage(1);
 }
 
@@ -200,9 +173,8 @@ function handleUpdate(event) {
     else if (type === 'A') { 
         currentHappiness = parseInt(data);
         initialVitalStates.hap = currentHappiness;
-        document.getElementById('bar-hap').style.width = currentHappiness + "%"; 
-        document.getElementById('val-hap').innerText = currentHappiness + "%"; 
         updateBackgroundVitals(initialVitalStates);
+        updateVisorMood(currentHappiness);
     }
     else if (type === 'M') { 
         let num = parseInt(data);
@@ -212,6 +184,7 @@ function handleUpdate(event) {
         if (num === 1) { v.classList.add('mood-happy'); b.classList.add('mood-happy'); }
         if (num === 2) { v.classList.add('mood-angry'); b.classList.add('mood-angry'); }
         if (num === 3) { v.classList.add('mood-tired'); b.classList.add('mood-tired'); }
+        if (num === 5) { v.classList.add('mood-love'); b.classList.add('mood-love'); } 
         if (num === 0) v.classList.remove('mood-sleep'); 
         lastInputTime = Date.now(); 
     }
