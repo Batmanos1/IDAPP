@@ -14,11 +14,11 @@ body {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
     z-index: -1; pointer-events: none; overflow: hidden; background: var(--bg); 
     
-    /* MODIFIED GRADIENTS: Increased size (vh) to blend and cover the screen */
+    /* MODIFIED GRADIENTS: Massive spread for seamless blend */
     background-image: 
-        radial-gradient(circle at 10% 20%, var(--c) 0%, transparent 45vh), 
-        radial-gradient(circle at 40% 70%, var(--p) 0%, transparent 55vh),
-        radial-gradient(circle at 80% 40%, var(--y) 0%, transparent 65vh);
+        radial-gradient(circle at 10% 20%, var(--c) 10%, transparent 100vh), 
+        radial-gradient(circle at 40% 70%, var(--p) 10%, transparent 110vh),
+        radial-gradient(circle at 80% 40%, var(--y) 10%, transparent 90vh);
         
     /* PULSING ANIMATION (retains performance) */
     animation: pulse-fade var(--speed) ease-in-out infinite alternate;
