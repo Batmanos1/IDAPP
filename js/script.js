@@ -67,6 +67,7 @@ function applyRobotIdentity(dataString) {
     // 0:Family | 1:Name | 2:Coins | 3:Color | 4:Shape | 5:Rad | 6:StrX | 7:StrY | 8:Layout
     // 9:Affection | 10:Hunger | 11:Energy
     
+    console.log("Applying Identity: " + dataString); // DEBUG
     let parts = dataString.split('|');
     if (parts.length < 8) return; 
 
@@ -113,8 +114,9 @@ function applyRobotIdentity(dataString) {
 }
 
 function addDynamicEye(dataString) {
+    console.log("Received Layout Packet: " + dataString); // DEBUG
+    
     // Protocol: relX, relY, baseW, baseH
-    // Note: baseW/baseH sent by robot ALREADY include the stretch factor.
     let coords = dataString.split(',');
     let xOff = parseInt(coords[0]);
     let yOff = parseInt(coords[1]);
@@ -189,7 +191,7 @@ function updateVisorGeometry() {
     visor.style.borderRadius = Math.min(30, rad) + "px";
 }
 
-// ... (Input Handlers - No changes needed) ...
+// ... (Input Handlers) ...
 function btnDown(e, cmd) {
     e.preventDefault(); 
     lastInputTime = Date.now(); 
@@ -227,11 +229,19 @@ function forceSleep() { send('Z'); closeMenu(); document.getElementById('visor')
 let startY = 0;
 const container = document.getElementById('app-container');
 
-// --- SWIPE LOGIC ---
+// --- SWIPE LOGIC (Unified Touch & Mouse) ---
 function handleStart(y) { startY = y; }
-function handleEnd(y) { if (Math.abs(startY - y) > 50) { scrollToPage(startY > y ? 2 : 1); } }
+function handleEnd(y) {
+    if (Math.abs(startY - y) > 50) {
+        scrollToPage(startY > y ? 2 : 1);
+    }
+}
+
+// Touch Events
 document.addEventListener('touchstart', e => handleStart(e.touches[0].clientY), {passive: false});
 document.addEventListener('touchend', e => handleEnd(e.changedTouches[0].clientY), {passive: false});
+
+// Mouse Events (PC Swipe)
 document.addEventListener('mousedown', e => handleStart(e.clientY));
 document.addEventListener('mouseup', e => handleEnd(e.clientY));
 
@@ -271,6 +281,8 @@ function onDisc() {
     document.body.classList.add('offline'); 
     document.getElementById('nebula-bg').classList.remove('alive');
     scrollToPage(1);
+    
+    // Clear dynamic eyes on disconnect
     document.getElementById('visor').innerHTML = '';
 }
 
@@ -285,14 +297,19 @@ function handleUpdate(event) {
     let parts = val.split(':');
     let type = parts[0]; let data = parts[1];
 
-    if (type === 'I') { applyRobotIdentity(data); }
-    else if (type === 'L') { addDynamicEye(data); }
+    if (type === 'I') { 
+        applyRobotIdentity(data);
+    }
+    else if (type === 'L') {
+        // NEW: Layout Packet Handler
+        addDynamicEye(data);
+    }
     else if (type === 'H') { 
         let scores = data.split(',');
         document.getElementById('hs-mem').innerText = "HS: " + scores[0];
         document.getElementById('hs-ref').innerText = "HS: " + scores[1];
         document.getElementById('hs-slot').innerText = "STRK: " + scores[2];
-        document.getElementById('val-coins').innerText = scores[3]; 
+        document.getElementById('val-coins').innerText = scores[3]; // Update coin text
     }
     else if (type === 'T') { 
         let txtDiv = document.getElementById('game-text');
@@ -302,6 +319,7 @@ function handleUpdate(event) {
     }
     else if (type === 'C') { document.getElementById('val-coins').innerText = data; }
     else if (type === 'A') { 
+        // This is a direct affection update (single value update)
         currentVitals.hap = parseInt(data);
         currentHappiness = currentVitals.hap;
         updateBackgroundVitals(currentVitals);
