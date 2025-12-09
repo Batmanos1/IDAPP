@@ -11,7 +11,7 @@ body {
     text-align: center; 
     margin: 0;
     overflow: hidden; 
-    touch-action: none;
+    touch-action: none; /* Disables browser zooming/panning */
     overscroll-behavior-y: none;
     user-select: none; -webkit-user-select: none;
     min-height: 100vh; min-height: 100dvh; 
@@ -30,6 +30,11 @@ body.offline #status.on { color: #666; text-shadow: none; }
 body.offline .btn-eye { box-shadow: none; background: #666; }
 body.offline .btn-round { border-color: #333; }
 body.offline .eye { opacity: 0.8; }
+
+/* HIDE VITALS WHILE OFFLINE */
+body.offline .stats-content { opacity: 0.3; pointer-events: none; filter: grayscale(100%); }
+/* Alternatively, to completely hide: */
+/* body.offline .stats-content { display: none; } */
 
 
 /* --- THE LIVING HEARTBEAT AURORA --- */
@@ -158,7 +163,7 @@ h1 { margin: 10px 0; text-shadow: 0 0 10px var(--glow); letter-spacing: 2px; fon
 .stop-btn { color: #ff0055 !important; border-top: 1px solid #ff0055; margin-top: 10px; justify-content: center; font-weight: bold;}
 .close-txt { margin-top: 20px; text-decoration: underline; color: #666; cursor: pointer; letter-spacing: 2px; }
 
-/* FIX: Smaller Switch for Sound toggle to fit screen */
+/* FIX: Smaller Switch for Sound */
 .switch { position: relative; display: inline-block; width: 34px; height: 18px; margin-left: 10px; }
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 20px; }
