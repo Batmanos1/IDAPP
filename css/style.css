@@ -9,7 +9,7 @@ body {
     min-height: 100vh;
 }
 
-/* --- THE OPTIMIZED AURORA EFFECT (Single Background Animation) --- */
+/* --- THE OPTIMIZED AURORA EFFECT (Fading/Pulsing) --- */
 #nebula-bg { 
     position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
     z-index: -1; pointer-events: none; overflow: hidden; background: var(--bg); 
@@ -19,24 +19,27 @@ body {
         radial-gradient(circle at 10% 20%, var(--c) 0%, transparent 25%), 
         radial-gradient(circle at 40% 70%, var(--p) 0%, transparent 30%),
         radial-gradient(circle at 80% 40%, var(--y) 0%, transparent 35%);
-        
-    background-size: 300% 300%; /* Massive area for smooth, large movement */
-    animation: flow-nebula var(--speed) ease-in-out infinite alternate;
-    filter: blur(30px); /* Reduced blur for performance */
+    
+    /* NEW: Add the pulsing animation */
+    animation: pulse-fade var(--speed) ease-in-out infinite alternate;
+    opacity: 0.7; /* Initial base opacity */
+    filter: blur(25px); /* Set a base blur */
     transition: background 1s ease, filter 0.5s ease, animation-duration 1s ease;
 }
 
-/* Animate background-position instead of transformations */
-@keyframes flow-nebula {
-    0% { background-position: 0% 0%; }
-    100% { background-position: 100% 100%; }
+/* NEW: Define a gentle pulsing/flicker animation using opacity and blur */
+@keyframes pulse-fade {
+    0% { opacity: 0.6; filter: blur(20px); }
+    50% { opacity: 0.8; filter: blur(40px); }
+    100% { opacity: 0.6; filter: blur(20px); }
 }
 
+
 /* MOODS & UI */
-body.mood-happy { --glow: #00ff88; --c: #00ff88; --speed: 10s; } /* Faster flow when happy */
-body.mood-angry { --glow: #ff0000; --c: #ff0055; --speed: 2s; } /* Fastest flow when angry */
-body.mood-tired { --glow: #5500ff; --c: #aa00ff; --speed: 40s; } /* Very slow when tired */
-body.mood-sleep { --glow: #222222; --c: #444; --speed: 50s; } /* Slowest flow when sleeping */
+body.mood-happy { --glow: #00ff88; --c: #00ff88; --speed: 10s; } /* Faster pulse when happy */
+body.mood-angry { --glow: #ff0000; --c: #ff0055; --speed: 2s; } /* Fastest pulse when angry */
+body.mood-tired { --glow: #5500ff; --c: #aa00ff; --speed: 40s; } /* Very slow pulse when tired */
+body.mood-sleep { --glow: #222222; --c: #444; --speed: 50s; } /* Slowest pulse when sleeping */
 
 #app-container { height: 200vh; transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .page { height: 100vh; width: 100%; box-sizing: border-box; padding-top: 20px; display: flex; flex-direction: column; justify-content: space-between; position: relative; z-index: 2; }
