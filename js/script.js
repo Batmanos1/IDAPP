@@ -14,10 +14,13 @@ let robotStrY = 100;
 let minEyeX = 1000, maxEyeX = -1000;
 let minEyeY = 1000, maxEyeY = -1000;
 
-const initialVitalStates = { hap: 50, hun: 80, eng: 10 };
+// Vitals Container
+let currentVitals = { hap: 50, hun: 80, eng: 100 };
 
 window.addEventListener('load', () => { 
     setInterval(checkIdleStatus, 1000); 
+    // Start "dimmed"
+    document.body.classList.add('offline');
 });
 
 function checkIdleStatus() {
@@ -44,18 +47,22 @@ function updateVisorMood(happiness) {
 
 function updateBackgroundVitals(vitals) {
     document.getElementById('bar-hap').style.width = vitals.hap + '%';
-    document.getElementById('bar-hun').style.width = vitals.hun + '%'; 
-    document.getElementById('bar-eng').style.width = (100 - vitals.eng) + '%';
-    
-    document.getElementById('val-eng').innerText = (100 - vitals.eng) + '%';
     document.getElementById('val-hap').innerText = vitals.hap + '%';
+
+    document.getElementById('bar-hun').style.width = vitals.hun + '%'; 
     document.getElementById('val-hun').innerText = vitals.hun + '%';
+
+    document.getElementById('bar-eng').style.width = vitals.eng + '%';
+    document.getElementById('val-eng').innerText = vitals.eng + '%';
 }
 
 function applyRobotIdentity(dataString) {
-    // Protocol: Family | Name | Coins | Color | ShapeType | Radius | StretchX | StretchY
+    // Protocol: 
+    // 0:Family | 1:Name | 2:Coins | 3:Color | 4:Shape | 5:Rad | 6:StrX | 7:StrY | 8:Layout
+    // 9:Affection | 10:Hunger | 11:Energy
+    
     let parts = dataString.split('|');
-    if (parts.length < 8) return; 
+    if (parts.length < 9) return; 
 
     let rName = parts[1];
     let rCoins = parts[2];
@@ -67,12 +74,32 @@ function applyRobotIdentity(dataString) {
     robotStrY = parseInt(parts[7]); 
 
     document.getElementById('app-title').innerText = rName.toUpperCase();
-    if(rCoins) document.getElementById('val-coins').innerText = rCoins;
+    
+    // FIX: Update Coins Immediately
+    if(rCoins) {
+        document.getElementById('val-coins').innerText = rCoins;
+        // Make sure the coin box is visible (handled in connectBLE but good to ensure)
+        document.getElementById('coin-box').style.display = 'block';
+    }
 
     if(rColor) {
         robotBaseColor = rColor;
+        // Apply color immediately and remove "offline" dimming
         document.documentElement.style.setProperty('--c', rColor);
         document.documentElement.style.setProperty('--glow', rColor);
+        document.body.classList.remove('offline');
+    }
+    
+    // --- SYNC VITALS ---
+    if (parts.length >= 12) {
+        currentVitals.hap = parseInt(parts[9]);
+        currentVitals.hun = parseInt(parts[10]);
+        currentVitals.eng = parseInt(parts[11]);
+        currentHappiness = currentVitals.hap;
+        
+        // Instant Update
+        updateBackgroundVitals(currentVitals);
+        updateVisorMood(currentHappiness);
     }
     
     // Reset Layout Tracking
@@ -80,11 +107,10 @@ function applyRobotIdentity(dataString) {
     minEyeX = 1000; maxEyeX = -1000;
     minEyeY = 1000; maxEyeY = -1000;
     
-    console.log("Connected to " + rName + ". Waiting for layout...");
+    console.log("Connected to " + rName + " (Hap:" + currentVitals.hap + " Eng:" + currentVitals.eng + ")");
 }
 
 function addDynamicEye(dataString) {
-    // Protocol: relX, relY, baseW, baseH
     let coords = dataString.split(',');
     let xOff = parseInt(coords[0]);
     let yOff = parseInt(coords[1]);
@@ -92,7 +118,7 @@ function addDynamicEye(dataString) {
     let h = parseInt(coords[3]);
 
     const visor = document.getElementById('visor');
-    const scale = 1.6; // Scale robot pixels (128x64) to Phone Visor (approx 220x80)
+    const scale = 1.6; 
 
     let div = document.createElement('div');
     div.className = 'eye';
@@ -101,39 +127,32 @@ function addDynamicEye(dataString) {
     let sW = w * scale;
     let sH = h * scale;
     
-    // Apply Stretch factors (from Identity)
+    // Apply Stretch factors
     let sx = robotStrX ? (robotStrX / 100.0) : 1.0;
     let sy = robotStrY ? (robotStrY / 100.0) : 1.0;
     
     let finalW = sW * sx;
     let finalH = sH * sy;
     
-    // 2. Position Logic (Centered)
-    // We position relative to the CENTER (50% 50%) of the Visor
-    // offset X scaled up
+    // 2. Position Logic
     let finalX = xOff * scale; 
     let finalY = yOff * scale;
 
     div.style.width = finalW + 'px';
     div.style.height = finalH + 'px';
-    
-    // Using calc() allows us to position relative to center without knowing container size
     div.style.left = `calc(50% + ${finalX}px)`;
     div.style.top = `calc(50% + ${finalY}px)`;
 
     // 3. Shape
     if(robotShape === 1) { 
-        // RECTANGLE
         div.style.borderRadius = (robotRad * 2) + "px"; 
     } else {
-        // CIRCLE
         div.style.borderRadius = "50%";
     }
 
     visor.appendChild(div);
     
     // 4. Update Visor Geometry Bounds
-    // We track the edges of this eye relative to center 0,0
     let halfW = finalW / 2;
     let halfH = finalH / 2;
     
@@ -147,28 +166,25 @@ function addDynamicEye(dataString) {
 
 function updateVisorGeometry() {
     const visor = document.getElementById('visor');
-    const paddingX = 40; // Space on sides
-    const paddingY = 30; // Space on top/bottom
-    const minW = 100;    // Minimum visual size
+    const paddingX = 40; 
+    const paddingY = 30; 
+    const minW = 100;    
     const minH = 60;
 
     let contentW = (maxEyeX - minEyeX);
     let contentH = (maxEyeY - minEyeY);
     
-    // Calculate new dimensions
     let finalW = Math.max(minW, contentW + paddingX);
     let finalH = Math.max(minH, contentH + paddingY);
     
     visor.style.width = finalW + "px";
     visor.style.height = finalH + "px";
     
-    // Adjust border radius if it gets too tall relative to width
-    // Keep it pill-shaped
     let rad = Math.min(finalW, finalH) / 2;
     visor.style.borderRadius = rad + "px";
 }
 
-// ... (Standard Input/BLE Handlers below) ...
+// ... (Input Handlers) ...
 function btnDown(e, cmd) {
     e.preventDefault(); 
     lastInputTime = Date.now(); 
@@ -230,7 +246,8 @@ async function connectBLE() {
         document.getElementById('connectOverlay').style.display = 'none';
         document.getElementById('coin-box').style.display = 'block';
         document.getElementById('visor').classList.remove('mood-off');
-        document.getElementById('nebula-bg').classList.add('alive'); 
+        // Do NOT light up yet. Wait for identity packet to set color.
+        
         lastInputTime = Date.now(); 
     } catch (e) { console.log(e); }
 }
@@ -242,6 +259,7 @@ function onDisc() {
     document.getElementById('coin-box').style.display = 'none';
     document.getElementById('visor').className = "visor mood-off";
     document.body.className = ""; 
+    document.body.classList.add('offline'); // Dim again
     document.getElementById('nebula-bg').classList.remove('alive');
     scrollToPage(1);
     
@@ -264,7 +282,6 @@ function handleUpdate(event) {
         applyRobotIdentity(data);
     }
     else if (type === 'L') {
-        // NEW: Layout Packet Handler
         addDynamicEye(data);
     }
     else if (type === 'H') { 
@@ -272,7 +289,7 @@ function handleUpdate(event) {
         document.getElementById('hs-mem').innerText = "HS: " + scores[0];
         document.getElementById('hs-ref').innerText = "HS: " + scores[1];
         document.getElementById('hs-slot').innerText = "STRK: " + scores[2];
-        document.getElementById('val-coins').innerText = scores[3];
+        document.getElementById('val-coins').innerText = scores[3]; // Update coin text
     }
     else if (type === 'T') { 
         let txtDiv = document.getElementById('game-text');
@@ -282,9 +299,9 @@ function handleUpdate(event) {
     }
     else if (type === 'C') { document.getElementById('val-coins').innerText = data; }
     else if (type === 'A') { 
-        currentHappiness = parseInt(data);
-        initialVitalStates.hap = currentHappiness;
-        updateBackgroundVitals(initialVitalStates);
+        currentVitals.hap = parseInt(data);
+        currentHappiness = currentVitals.hap;
+        updateBackgroundVitals(currentVitals);
         updateVisorMood(currentHappiness);
     }
     else if (type === 'M') { 
