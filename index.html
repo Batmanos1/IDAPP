@@ -2,21 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- UPDATED VIEWPORT: viewport-fit=cover extends background into the notch area -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>IDAPP</title>
     
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="apple-touch-icon" href="icon.png">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- iOS Specific Styling -->
     <meta name="theme-color" content="#050505">
     <meta name="apple-mobile-web-app-capable" content="yes"> 
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
     
     <link rel="stylesheet" href="css/style.css"> 
     
 </head>
 <body>
     <div id="nebula-bg"></div>
-    <div id="connectOverlay" style="position:fixed; top:20px; right:20px; z-index:99;">
+    <!-- Adjusted overlay position to respect safe areas -->
+    <div id="connectOverlay" style="position:fixed; top:calc(20px + env(safe-area-inset-top)); right:20px; z-index:99;">
         <button onclick="connectBLE()" style="background:none; border:1px solid #0ff; color:#0ff; padding:5px 10px;">CONNECT</button>
     </div>
 
@@ -46,7 +52,8 @@
                     <span class="bracket">(</span> <div class="btn-eye b-b"></div> <div class="btn-eye b-s"></div> <span class="bracket">)</span>
                 </div>
             </div>
-            <div class="hint">SWIPE UP FOR VITALS</div>
+            <!-- Added margin-bottom to handle swipe indicator bars -->
+            <div class="hint" style="margin-bottom: max(30px, env(safe-area-inset-bottom));">SWIPE UP FOR VITALS</div>
         </div>
 
         <div class="page" id="p2" style="background: transparent;">
@@ -82,4 +89,8 @@
 
     <script src="js/script.js"></script>
 </body>
+</html>
+    <script src="js/script.js"></script>
+</body>
+
 </html>
