@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>IDAPP</title>
+    
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <link rel="stylesheet" href="css/style.css"> 
+    
+</head>
+<body>
+    <div id="nebula-bg"></div>
+    <div id="connectOverlay" style="position:fixed; top:20px; right:20px; z-index:99;">
+        <button onclick="connectBLE()" style="background:none; border:1px solid #0ff; color:#0ff; padding:5px 10px;">CONNECT</button>
+    </div>
+
+    <div id="app-container">
+        <div class="page" id="p1">
+            <div>
+                <h1 id="app-title">IDAPP</h1>
+                <div class="subtitle" id="app-type">UNIVERSAL CONTROLLER</div>
+                <div id="status">OFFLINE</div>
+                <div id="coin-box" style="display:none;">COINS: <span id="val-coins">0</span></div>
+            </div>
+
+            <div class="visor-container">
+                <div class="visor mood-off" id="visor"> 
+                    <div class="eye small"></div> <div class="eye big"></div>
+                    <div class="eye big"></div> <div class="eye small"></div>
+                </div>
+                <div id="game-text"></div>
+            </div>
+
+            <div class="controls">
+                <div class="btn-round pink" id="btn-L" onpointerdown="btnDown(event, 'L')" onpointerup="btnUp(event, 'L')" onpointerleave="btnUp(event, 'L')" oncontextmenu="return false;">
+                    <span class="bracket">(</span> <div class="btn-eye b-s"></div> <div class="btn-eye b-b"></div> <span class="bracket">)</span>
+                </div>
+                <div class="btn-round menu-btn" onclick="openMenu()">MENU</div>
+                <div class="btn-round purp" id="btn-R" onpointerdown="btnDown(event, 'R')" onpointerup="btnUp(event, 'R')" onpointerleave="btnUp(event, 'R')" oncontextmenu="return false;">
+                    <span class="bracket">(</span> <div class="btn-eye b-b"></div> <div class="btn-eye b-s"></div> <span class="bracket">)</span>
+                </div>
+            </div>
+            <div class="hint">SWIPE UP FOR VITALS</div>
+        </div>
+
+        <div class="page" id="p2" style="background: transparent;">
+            <div class="hint" style="margin-top:20px; transform: rotate(180deg);">SWIPE DOWN FOR CONTROLS</div>
+            <div class="stats-content">
+                <h3>SYSTEM VITALS</h3>
+                <div class="bar-container"><div class="label"><span>HAPPINESS</span> <span id="val-hap">50%</span></div><div class="progress-bg"><div class="progress-fill" id="bar-hap" style="width: 50%"></div></div></div>
+                <div class="bar-container"><div class="label"><span>HUNGER</span> <span>80%</span></div><div class="progress-bg"><div class="progress-fill fill-p" style="width: 80%"></div></div></div>
+                <div class="bar-container"><div class="label"><span>ENERGY</span> <span id="val-eng">10%</span></div><div class="progress-bg"><div class="progress-fill fill-y" id="bar-eng" style="width: 10%"></div></div></div>
+            </div>
+            <div style="flex-grow:1"></div>
+        </div>
+    </div>
+
+    <div id="menuModal">
+        <div class="menu-box">
+            <div class="cat-header" onclick="toggleCat('games')">GAMES PROTOCOLS <span>▼</span></div>
+            <div id="cat-games" class="cat-content">
+                <button class="menu-item" onclick="startGame('1')">MEMORY <span class="score-badge" id="hs-mem">HS: -</span></button>
+                <button class="menu-item" onclick="startGame('2')">REFLEX <span class="score-badge" id="hs-ref">HS: -</span></button>
+                <button class="menu-item" onclick="startGame('3')">SLOTS <span class="score-badge" id="hs-slot">STRK: -</span></button>
+                <button class="menu-item stop-btn" onclick="stopGame()">STOP CURRENT GAME</button>
+            </div>
+            <div class="cat-header" onclick="toggleCat('sys')" style="margin-top:10px;">SYSTEM <span>▼</span></div>
+            <div id="cat-sys" class="cat-content">
+                <button class="menu-item" onclick="send('F')">BUY FOOD (10 COINS)</button>
+                <div class="menu-item">SOUND <label class="switch"><input type="checkbox" checked onchange="send('V')"><span class="slider round"></span></label></div>
+                <button class="menu-item" onclick="forceSleep()">FORCE SLEEP MODE</button>
+            </div>
+            <div class="close-txt" onclick="closeMenu()">[ CLOSE DATA PAD ]</div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+</body>
+</html>
