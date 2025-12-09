@@ -37,12 +37,15 @@
             </div>
 
             <div class="controls">
+                <!-- UPDATED: GENERAL BUTTONS "L" & "R" -->
                 <div class="btn-round pink" id="btn-L" onpointerdown="btnDown(event, 'L')" onpointerup="btnUp(event, 'L')" onpointerleave="btnUp(event, 'L')" oncontextmenu="return false;">
-                    <span class="bracket">(</span> <div class="btn-eye b-s"></div> <div class="btn-eye b-b"></div> <span class="bracket">)</span>
+                    L
                 </div>
+                
                 <div class="btn-round menu-btn" onclick="openMenu()">MENU</div>
+                
                 <div class="btn-round purp" id="btn-R" onpointerdown="btnDown(event, 'R')" onpointerup="btnUp(event, 'R')" onpointerleave="btnUp(event, 'R')" oncontextmenu="return false;">
-                    <span class="bracket">(</span> <div class="btn-eye b-b"></div> <div class="btn-eye b-s"></div> <span class="bracket">)</span>
+                    R
                 </div>
             </div>
             
@@ -63,7 +66,6 @@
 
     <div id="menuModal">
         <div class="menu-box">
-            <!-- GAMES SECTION -->
             <div class="cat-header" onclick="toggleCat('games')">GAMES <span>▼</span></div>
             <div id="cat-games" class="cat-content">
                 <button class="menu-item" onclick="startGame('1')">MEMORY <span class="score-badge" id="hs-mem">HS: -</span></button>
@@ -72,16 +74,17 @@
                 <button class="menu-item stop-btn" onclick="stopGame()">STOP CURRENT GAME</button>
             </div>
 
-            <!-- STORE SECTION -->
             <div class="cat-header" onclick="toggleCat('store')" style="margin-top:10px;">STORE <span>▼</span></div>
             <div id="cat-store" class="cat-content">
                 <button class="menu-item" onclick="send('F')">BUY FOOD (10 COINS)</button>
             </div>
 
-            <!-- SYSTEM SECTION -->
             <div class="cat-header" onclick="toggleCat('sys')" style="margin-top:10px;">SYSTEM <span>▼</span></div>
             <div id="cat-sys" class="cat-content">
-                <div class="menu-item">SOUND <label class="switch"><input type="checkbox" checked onchange="send('V')"><span class="slider round"></span></label></div>
+                <div class="menu-item">
+                    <span>SOUND</span> 
+                    <label class="switch"><input type="checkbox" checked onchange="send('V')"><span class="slider round"></span></label>
+                </div>
                 <button class="menu-item" onclick="forceSleep()">FORCE SLEEP MODE</button>
             </div>
             
