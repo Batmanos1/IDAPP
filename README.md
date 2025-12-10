@@ -4,6 +4,7 @@
 
 ## Keep in mind ! ! !
 The robots are still a work in progress and therefore still private. The app is useless without them.
+Project was inspired by the RoboEyes library by FluxGarage: https://github.com/FluxGarage/RoboEyes
 
 ### **Live App:** [https://batmanos1.github.io/IDAPP/](https://batmanos1.github.io/IDAPP/)
 
