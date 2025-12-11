@@ -3,7 +3,35 @@
     --bg: #050505; --glow: #00e5ff; 
     --beat-speed: 2s; 
 }
-        
+
+/* --- CHRISTMAS SKIN --- */
+/* When body has class 'theme-christmas', override the main variables */
+body.theme-christmas {
+    --c: #ff0033 !important;   /* Christmas Red */
+    --glow: #00ff44 !important; /* Christmas Green Glow */
+    --bg: #0a0000;
+}
+/* Show snow when theme is active */
+body.theme-christmas #snow-fall { display: block; }
+
+/* SNOWFALL EFFECT */
+#snow-fall {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 0; pointer-events: none; display: none;
+    background-image: 
+        radial-gradient(4px 4px at 20% 30%, #fff, transparent),
+        radial-gradient(4px 4px at 40% 70%, #fff, transparent),
+        radial-gradient(4px 4px at 60% 20%, #fff, transparent),
+        radial-gradient(4px 4px at 80% 90%, #fff, transparent);
+    background-size: 200px 200px;
+    animation: snow-anim 10s linear infinite;
+    opacity: 0.3;
+}
+@keyframes snow-anim {
+    from { background-position: 0 0; }
+    to { background-position: 0 200px; }
+}
+
 body {
     background: var(--bg); color: var(--c);
     font-family: 'Courier New', monospace;
@@ -12,7 +40,7 @@ body {
     overscroll-behavior-y: none;
     user-select: none; -webkit-user-select: none;
     min-height: 100vh; min-height: 100dvh; 
-    transition: color 0.5s ease;
+    transition: color 0.5s ease, background 0.5s ease;
 }
 
 /* --- OFFLINE STATE --- */
@@ -67,15 +95,7 @@ h1 { margin: 10px 0; text-shadow: 0 0 10px var(--glow); letter-spacing: 2px; fon
     box-shadow: 0 0 20px rgba(0,0,0,0.3); backdrop-filter: blur(10px); 
     touch-action: none;
 }
-
-/* Updated Eye Glow to use Drop-Shadow (works with clip-path) */
-.eye { 
-    position: absolute; 
-    background: var(--c); 
-    filter: drop-shadow(0 0 5px var(--glow)); 
-    transition: all 0.5s ease; 
-    transform: translate(-50%, -50%); 
-}
+.eye { position: absolute; background: var(--c); filter: drop-shadow(0 0 5px var(--glow)); transition: all 0.5s ease; transform: translate(-50%, -50%); }
 
 /* MOOD EYE SHAPES */
 .mood-angry .eye { clip-path: polygon(0% 20%, 100% 0%, 100% 100%, 0% 100%); }
