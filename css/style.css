@@ -65,12 +65,23 @@ h1 { margin: 10px 0; text-shadow: 0 0 10px var(--glow); letter-spacing: 2px; fon
     border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); 
     transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
     box-shadow: 0 0 20px rgba(0,0,0,0.3); backdrop-filter: blur(10px); 
+    /* Important for touch events */
+    touch-action: none;
 }
 .eye { position: absolute; background: var(--c); box-shadow: 0 0 15px var(--c); transition: all 0.5s ease; transform: translate(-50%, -50%); }
 
+/* MOOD EYE SHAPES */
 .mood-angry .eye { clip-path: polygon(0% 20%, 100% 0%, 100% 100%, 0% 100%); }
 .mood-happy .eye { clip-path: polygon(0 0, 100% 0, 100% 70%, 50% 60%, 0 70%); }
-.mood-tired .eye { transform: translate(-50%, -50%) scaleY(0.3) !important; margin-top: 10px; }
+
+/* TIRED: Flat Top Lid Effect */
+.mood-tired .eye { 
+    transform: translate(-50%, -50%) !important; 
+    /* Cut off the top 40% to make it look bored/flat */
+    clip-path: polygon(0 40%, 100% 40%, 100% 100%, 0% 100%);
+    margin-top: 0;
+}
+
 .mood-sleep .eye { transform: translate(-50%, -50%) scaleY(0.1) !important; background: #444; box-shadow: none; margin-top: 10px; }
 .mood-off .eye { background: #111; box-shadow: none; opacity: 0.2; }
 .mood-love .eye {
@@ -126,6 +137,8 @@ h1 { margin: 10px 0; text-shadow: 0 0 10px var(--glow); letter-spacing: 2px; fon
 input[type="text"] { background: #111; border: 1px solid #333; color: #fff; padding: 10px; width: 60%; font-family: inherit; text-transform: uppercase; }
 
 #face-canvas { width: 100%; background: #000; border: 1px solid var(--c); image-rendering: pixelated; margin-bottom: 10px; }
+.slider-row { display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #888; margin-bottom: 5px; }
+.slider-row input { width: 60%; }
 
 .joystick-wrapper { display: flex; justify-content: center; padding: 20px; }
 #joystick-zone { width: 160px; height: 160px; background: #111; border: 2px solid #333; border-radius: 50%; position: relative; touch-action: none; }
