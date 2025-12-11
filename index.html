@@ -19,10 +19,15 @@
 <body>
     <div id="nebula-bg"></div>
     
-    <div id="snow-container">
-        <div class="snow-layer layer-1"></div>
-        <div class="snow-layer layer-2"></div>
-        <div class="snow-layer layer-3"></div>
+    <div id="cartoon-snow"></div>
+
+    <div id="xmas-decor" style="display:none;">
+        <ul class="lightrope">
+            <li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li>
+            <li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li>
+            <li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li>
+            <li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li>
+        </ul>
     </div>
 
     <div id="connectOverlay" style="position:fixed; top:calc(20px + env(safe-area-inset-top)); right:20px; z-index:99;">
@@ -35,7 +40,7 @@
 
     <div id="app-container">
         <div class="page" id="p1">
-            <div style="margin-top: 30px;">
+            <div style="margin-top: 50px;">
                 <h1 id="app-title">IDAPP</h1>
                 <div class="subtitle" id="app-type">UNIVERSAL CONTROLLER</div>
                 <div id="status">OFFLINE</div>
@@ -55,7 +60,7 @@
                 <div class="btn-round purp" id="btn-R" onpointerdown="btnDown(event, 'R')" onpointerup="btnUp(event, 'R')" onpointerleave="btnUp(event, 'R')" oncontextmenu="return false;">R</div>
             </div>
             
-            <div class="hint">SWIPE UP FOR VITALS</div>
+            <div class="hint" style="margin-bottom: max(30px, env(safe-area-inset-bottom));">SWIPE UP FOR VITALS</div>
         </div>
 
         <div class="page" id="p2" style="background: transparent;">
