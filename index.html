@@ -18,6 +18,8 @@
 </head>
 <body>
     <div id="nebula-bg"></div>
+    <div id="snow-fall"></div>
+
     <div id="connectOverlay" style="position:fixed; top:calc(20px + env(safe-area-inset-top)); right:20px; z-index:99;">
         <button onclick="connectBLE()" class="connect-btn">CONNECT</button>
     </div>
@@ -118,14 +120,12 @@
             
             <div class="section-title">FACE BUILDER</div>
             <p style="font-size:10px; color:#666;">TAP AN EYE TO EDIT</p>
-            
             <canvas id="face-canvas" width="256" height="128"></canvas>
             
             <div id="eye-controls" style="display:none; background:#111; padding:10px; margin-bottom:10px; border:1px solid #333;">
                 <div class="slider-row"><span>WIDTH</span> <input type="range" id="edit-w" min="4" max="50" oninput="updateEyeParam()"></div>
                 <div class="slider-row"><span>HEIGHT</span> <input type="range" id="edit-h" min="4" max="50" oninput="updateEyeParam()"></div>
                 <div class="slider-row"><span>ROUND</span> <input type="range" id="edit-r" min="0" max="25" oninput="updateEyeParam()"></div>
-                
                 <div class="row-btns" style="margin-top:10px; margin-bottom:0;">
                     <button class="xs-btn" onclick="centerEye()">CENTER</button>
                     <button class="xs-btn" onclick="mirrorEye()">MIRROR</button>
