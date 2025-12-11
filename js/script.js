@@ -1,3 +1,6 @@
+/* IDAPP Logic - v9.0 */
+
+// --- 🎄 DEVELOPER SETTINGS 🎄 ---
 const ENABLE_CHRISTMAS = true; 
 
 const btnState = { L: { repeat: null, tapCount: 0, tapTimer: null }, R: { repeat: null, tapCount: 0, tapTimer: null } };
@@ -15,12 +18,8 @@ window.addEventListener('load', () => {
     document.body.classList.add('offline');
     initCanvas(); 
     
-    // --- APPLY CHRISTMAS THEME ---
-    if(ENABLE_CHRISTMAS) {
-        document.body.classList.add('theme-christmas');
-    }
+    if(ENABLE_CHRISTMAS) document.body.classList.add('theme-christmas');
 
-    // VISOR INTERACTIONS
     const visor = document.getElementById('visor');
     visor.addEventListener('click', (e) => {
         let rect = visor.getBoundingClientRect();
@@ -30,14 +29,59 @@ window.addEventListener('load', () => {
     visor.addEventListener('pointermove', (e) => {
         moveCount++;
         if(moveCount > 25) { 
-            send('P'); 
-            moveCount = 0;
+            send('P'); moveCount = 0;
             visor.style.transform = "scale(1.05)";
             setTimeout(() => visor.style.transform = "scale(1)", 200);
         }
     });
     visor.addEventListener('pointerleave', () => moveCount = 0);
 });
+
+// --- NEW FUNCTION: RENDER VISOR LOCALLY ---
+function renderLocalVisor(eyeList) {
+    const visor = document.getElementById('visor');
+    visor.innerHTML = ''; // Clear existing
+    
+    // Reset bounds
+    minEyeX = 1000; maxEyeX = -1000; minEyeY = 1000; maxEyeY = -1000;
+    
+    const scale = 2.2; // Scale for phone screen visibility (was 1.6)
+
+    eyeList.forEach(e => {
+        let div = document.createElement('div');
+        div.className = 'eye';
+        
+        let finalW = e.w * scale;
+        let finalH = e.h * scale;
+        
+        // Editor range is 0-128. Center is 64,32. 
+        // We need to shift so 64,32 maps to center of visor container
+        // Rel X = e.x - 64
+        // Rel Y = e.y - 32
+        
+        let relX = (e.x - 64) * scale;
+        let relY = (e.y - 32) * scale;
+
+        div.style.width = finalW + 'px';
+        div.style.height = finalH + 'px';
+        div.style.left = `calc(50% + ${relX}px)`;
+        div.style.top = `calc(50% + ${relY}px)`;
+        
+        // Apply radius
+        let rad = (e.r || 0) * scale;
+        div.style.borderRadius = rad + "px";
+
+        visor.appendChild(div);
+        
+        // Bounds for container sizing
+        let halfW = finalW / 2; let halfH = finalH / 2;
+        if (relX - halfW < minEyeX) minEyeX = relX - halfW;
+        if (relX + halfW > maxEyeX) maxEyeX = relX + halfW;
+        if (relY - halfH < minEyeY) minEyeY = relY - halfH;
+        if (relY + halfH > maxEyeY) maxEyeY = relY + halfH;
+    });
+    updateVisorGeometry();
+}
 
 function checkIdleStatus() {
     if (document.getElementById('status').innerText === "ONLINE" && (Date.now() - lastInputTime > 5000)) {
@@ -53,8 +97,6 @@ function updateVisorMood(happiness) {
     else if (happiness > 60) { v.classList.add('mood-happy'); b.classList.add('mood-happy'); } 
     else if (happiness < 30) { v.classList.add('mood-angry'); b.classList.add('mood-angry'); }
     
-    // Apply robot base color ONLY if Christmas mode is disabled
-    // If Christmas mode is ON, the CSS !important rules will handle the colors
     if(robotBaseColor && !ENABLE_CHRISTMAS) {
         document.documentElement.style.setProperty('--c', robotBaseColor);
         document.documentElement.style.setProperty('--glow', robotBaseColor);
@@ -86,7 +128,6 @@ function applyRobotIdentity(dataString) {
     }
     if(rColor) {
         robotBaseColor = rColor;
-        // Only set variables if NOT christmas mode
         if(!ENABLE_CHRISTMAS) {
             document.documentElement.style.setProperty('--c', rColor);
             document.documentElement.style.setProperty('--glow', rColor);
@@ -102,44 +143,49 @@ function applyRobotIdentity(dataString) {
         updateBackgroundVitals(currentVitals);
         updateVisorMood(currentHappiness);
     }
-    document.getElementById('visor').innerHTML = '';
-    minEyeX = 1000; maxEyeX = -1000;
-    minEyeY = 1000; maxEyeY = -1000;
+    // Only clear if empty, otherwise we keep what we have (useful for reconnects)
+    if(document.getElementById('visor').children.length === 0) {
+        document.getElementById('visor').innerHTML = '';
+        minEyeX = 1000; maxEyeX = -1000; minEyeY = 1000; maxEyeY = -1000;
+    }
 }
 
 function addDynamicEye(dataString) {
+    // This is called when robot sends 'L' packet (usually on connection)
+    // We parse it into a local object format and render
     let coords = dataString.split(',');
     let xOff = parseInt(coords[0]);
     let yOff = parseInt(coords[1]);
     let w = parseInt(coords[2]);
     let h = parseInt(coords[3]);
+    
+    // NOTE: 'L' packet doesn't send radius currently to save bandwidth
+    // We assume 50% for circle or 2px for bar
+    let r = (h < 10) ? 2 : (Math.min(w,h)/2);
 
+    // To prevent clearing existing eyes when receiving multiple packets, 
+    // we need to know if this is the start. For simplicity, we just append to DOM directly here
+    // But for better syncing, let's just use the DOM append method as before
+    
     const visor = document.getElementById('visor');
-    const scale = 1.6; 
+    const scale = 2.2; 
     let div = document.createElement('div');
     div.className = 'eye';
     
-    let finalW = w * scale;
-    let finalH = h * scale;
-    let finalX = xOff * scale; 
-    let finalY = yOff * scale;
+    let finalW = w * scale; let finalH = h * scale;
+    let finalX = xOff * scale; let finalY = yOff * scale;
 
-    div.style.width = finalW + 'px';
-    div.style.height = finalH + 'px';
-    div.style.left = `calc(50% + ${finalX}px)`;
-    div.style.top = `calc(50% + ${finalY}px)`;
-    
-    if(h < 10) div.style.borderRadius = "2px"; else div.style.borderRadius = "50%";
+    div.style.width = finalW + 'px'; div.style.height = finalH + 'px';
+    div.style.left = `calc(50% + ${finalX}px)`; div.style.top = `calc(50% + ${finalY}px)`;
+    div.style.borderRadius = r * scale + "px";
 
     visor.appendChild(div);
     
-    let halfW = finalW / 2;
-    let halfH = finalH / 2;
+    let halfW = finalW / 2; let halfH = finalH / 2;
     if (finalX - halfW < minEyeX) minEyeX = finalX - halfW;
     if (finalX + halfW > maxEyeX) maxEyeX = finalX + halfW;
     if (finalY - halfH < minEyeY) minEyeY = finalY - halfH;
     if (finalY + halfH > maxEyeY) maxEyeY = finalY + halfH;
-    
     updateVisorGeometry();
 }
 
@@ -214,10 +260,9 @@ function initCanvas() {
 
 function drawFace() {
     ctx.fillStyle = "#000"; ctx.fillRect(0,0,256,128);
-    // Force colors for editor preview if Christmas mode is on
+    // Christmas color override for editor
     let strokeColor = ENABLE_CHRISTMAS ? "#ff0033" : robotBaseColor;
     let fillColor = ENABLE_CHRISTMAS ? "#ff0033" : robotBaseColor;
-    
     ctx.strokeStyle = strokeColor; ctx.lineWidth = 2; ctx.strokeRect(0,0,256,128);
     
     eyes.forEach((e, i) => {
@@ -281,13 +326,26 @@ function deleteSelectedEye() {
     eyes.splice(selectedEyeIndex, 1);
     selectEye(-1);
 }
-function addEye() { if(eyes.length < 8) { eyes.push({x: 64, y: 32, w: 20, h: 20, r: 5}); selectEye(eyes.length-1); } }
+function addEye() { 
+    if(eyes.length < 8) { 
+        let offsetX = (eyes.length % 2 === 0) ? 20 : -20;
+        let offsetY = (eyes.length > 2) ? 10 : 0;
+        eyes.push({x: 64 + offsetX, y: 32 + offsetY, w: 24, h: 24, r: 5}); 
+        selectEye(eyes.length-1); 
+    } 
+}
 function clearCanvas() { eyes = []; selectEye(-1); drawFace(); }
+
+// --- UPDATED UPLOAD FUNCTION ---
 function uploadFace() {
     let str = `U:${eyes.length}`;
     eyes.forEach(e => { str += `;${Math.floor(e.x-64)},${Math.floor(e.y-32)},${e.w},${e.h},${e.r||0}`; });
     send(str);
+    // IMMEDIATELY update local visor
+    renderLocalVisor(eyes);
+    closeWorkshop();
 }
+
 function applyPreset(id) {
     const presets = [
         "U:2;-20,0,24,24,12;20,0,24,24,12", 
@@ -296,6 +354,27 @@ function applyPreset(id) {
         "U:3;0,-15,24,24,2;-18,10,18,18,2;18,10,18,18,2" 
     ];
     send(presets[id]);
+    
+    // Reverse parse the string back into eyes array for local display
+    // U:count;x,y,w,h,r...
+    let parts = presets[id].split(';');
+    let count = parseInt(parts[0].split(':')[1]);
+    let newEyes = [];
+    for(let i=1; i<=count; i++) {
+        let p = parts[i].split(',');
+        // Coords are relative (-64..64), need absolute (0..128)
+        newEyes.push({
+            x: parseInt(p[0]) + 64,
+            y: parseInt(p[1]) + 32,
+            w: parseInt(p[2]),
+            h: parseInt(p[3]),
+            r: parseInt(p[4])
+        });
+    }
+    eyes = newEyes; // Sync editor array too
+    drawFace();
+    renderLocalVisor(newEyes);
+    closeWorkshop();
 }
 
 let draggingEye = null;
