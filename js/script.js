@@ -1,5 +1,3 @@
-/* IDAPP Logic - v4.0 (Pencil Icon Edition) */
-
 const btnState = { L: { repeat: null, tapCount: 0, tapTimer: null }, R: { repeat: null, tapCount: 0, tapTimer: null } };
 let isGameRunning = false; 
 let lastInputTime = Date.now();
@@ -20,8 +18,44 @@ let currentVitals = { hap: 50, hun: 80, eng: 100 };
 window.addEventListener('load', () => { 
     setInterval(checkIdleStatus, 1000); 
     document.body.classList.add('offline');
-    initCanvas(); // Initialize Face Builder Canvas
+    initCanvas(); 
+    
+    // --- PET & POKE INTERACTIONS ---
+    const visor = document.getElementById('visor');
+    
+    // Poke Logic (Tap)
+    visor.addEventListener('click', (e) => {
+        let rect = visor.getBoundingClientRect();
+        let x = e.clientX - rect.left;
+        // Tap left side vs right side
+        if(x < rect.width / 2) {
+             send('L'); 
+             showTouchRipple(e.clientX, e.clientY);
+        } else {
+             send('R');
+             showTouchRipple(e.clientX, e.clientY);
+        }
+    });
+
+    // Pet Logic (Rubbing/Swiping detected via pointermove)
+    let moveCount = 0;
+    visor.addEventListener('pointermove', (e) => {
+        moveCount++;
+        if(moveCount > 25) { // Sensitivity threshold
+            send('P'); // Send PET command
+            moveCount = 0;
+            // Visual bounce effect
+            visor.style.transform = "scale(1.05)";
+            setTimeout(() => visor.style.transform = "scale(1)", 200);
+        }
+    });
+    visor.addEventListener('pointerleave', () => moveCount = 0);
+    visor.addEventListener('pointerup', () => moveCount = 0);
 });
+
+function showTouchRipple(x, y) {
+    // Optional: Add a small visual ripple for taps if desired
+}
 
 function checkIdleStatus() {
     if (document.getElementById('status').innerText === "ONLINE" && (Date.now() - lastInputTime > 5000)) {
@@ -58,7 +92,6 @@ function updateBackgroundVitals(vitals) {
 }
 
 function applyRobotIdentity(dataString) {
-    // Protocol: Family|Name|Coins|Color|Shape|Rad|StrX|StrY|Layout|Aff|Hung|Eng
     let parts = dataString.split('|');
     if (parts.length < 8) return; 
 
@@ -71,7 +104,6 @@ function applyRobotIdentity(dataString) {
 
     document.getElementById('app-title').innerText = rName.toUpperCase();
     
-    // Update Rename Input in System Tab
     if(document.getElementById('rename-input')) document.getElementById('rename-input').value = rName;
     
     if(rCoins) {
@@ -201,16 +233,12 @@ function openMenu() {
 }
 function closeMenu() { document.getElementById('menuModal').style.display = 'none'; }
 
-function openWorkshop() {
-    document.getElementById('workshopModal').style.display = 'flex';
-}
-function closeWorkshop() {
-    document.getElementById('workshopModal').style.display = 'none';
-}
+function openWorkshop() { document.getElementById('workshopModal').style.display = 'flex'; }
+function closeWorkshop() { document.getElementById('workshopModal').style.display = 'none'; }
 
 function forceSleep() { send('Z'); closeMenu(); document.getElementById('visor').className = "visor mood-sleep"; document.body.className = "mood-sleep"; }
 
-// --- TAB SYSTEM (For Menu Modal) ---
+// --- TAB SYSTEM ---
 function switchTab(id) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.m-tab').forEach(el => el.classList.remove('active'));
@@ -219,15 +247,15 @@ function switchTab(id) {
 }
 
 // --- FACE BUILDER (Canvas) ---
-let eyes = [{x: 44, y: 32, w: 24, h: 24}, {x: 84, y: 32, w: 24, h: 24}]; 
-let canvas, ctx;
+let eyes = [{x: 44, y: 32, w: 24, h: 24, r: 0}, {x: 84, y: 32, w: 24, h: 24, r: 0}]; 
+let canvas, ctx, selectedEyeIndex = -1;
 
 function initCanvas() {
     canvas = document.getElementById('face-canvas');
     ctx = canvas.getContext('2d');
     drawFace();
     
-    // Canvas Touch Events
+    // Canvas Interactions
     canvas.addEventListener('mousedown', startDrag);
     canvas.addEventListener('touchstart', startDrag);
     canvas.addEventListener('mousemove', moveDrag);
@@ -239,27 +267,67 @@ function initCanvas() {
 function drawFace() {
     ctx.fillStyle = "#000"; ctx.fillRect(0,0,256,128);
     ctx.strokeStyle = robotBaseColor; ctx.lineWidth = 2; ctx.strokeRect(0,0,256,128);
-    ctx.fillStyle = robotBaseColor;
-    eyes.forEach(e => {
+    
+    eyes.forEach((e, i) => {
+        // Highlight selected eye white, others neon
+        ctx.fillStyle = (i === selectedEyeIndex) ? "#fff" : robotBaseColor;
         let cx = e.x * 2; let cy = e.y * 2;
         let cw = e.w * 2; let ch = e.h * 2;
         ctx.fillRect(cx - cw/2, cy - ch/2, cw, ch);
     });
 }
 
-function addEye() { if(eyes.length < 8) { eyes.push({x: 64, y: 32, w: 20, h: 20}); drawFace(); } }
-function clearCanvas() { eyes = []; drawFace(); }
+function selectEye(index) {
+    selectedEyeIndex = index;
+    let controls = document.getElementById('eye-controls');
+    
+    if(index > -1) {
+        controls.style.display = 'block';
+        document.getElementById('edit-w').value = eyes[index].w;
+        document.getElementById('edit-h').value = eyes[index].h;
+        document.getElementById('edit-r').value = eyes[index].r || 0;
+    } else {
+        controls.style.display = 'none';
+    }
+    drawFace();
+}
+
+function updateEyeParam() {
+    if(selectedEyeIndex === -1) return;
+    eyes[selectedEyeIndex].w = parseInt(document.getElementById('edit-w').value);
+    eyes[selectedEyeIndex].h = parseInt(document.getElementById('edit-h').value);
+    eyes[selectedEyeIndex].r = parseInt(document.getElementById('edit-r').value);
+    drawFace();
+}
+
+function deleteSelectedEye() {
+    if(selectedEyeIndex === -1) return;
+    eyes.splice(selectedEyeIndex, 1);
+    selectEye(-1);
+}
+
+function addEye() { 
+    if(eyes.length < 8) { 
+        eyes.push({x: 64, y: 32, w: 20, h: 20, r: 0}); 
+        selectEye(eyes.length-1); 
+    } 
+}
+
+function clearCanvas() { eyes = []; selectEye(-1); drawFace(); }
+
 function uploadFace() {
-    let str = `U:${eyes.length},0,100,100`;
-    eyes.forEach(e => { str += `;${Math.floor(e.x-64)},${Math.floor(e.y-32)},${e.w},${e.h}`; });
+    // Protocol: U:count;x,y,w,h,r...
+    let str = `U:${eyes.length}`;
+    eyes.forEach(e => { str += `;${Math.floor(e.x-64)},${Math.floor(e.y-32)},${e.w},${e.h},${e.r||0}`; });
     send(str);
 }
+
 function applyPreset(id) {
     const presets = [
-        "U:2,0,100,100;-20,0,24,24;20,0,24,24",
-        "U:1,0,80,120;0,0,40,40",
-        "U:4,0,100,100;-36,-2,14,14;36,-2,14,14;-16,5,26,26;16,5,26,26",
-        "U:3,4,110,90;0,-15,24,24;-18,10,18,18;18,10,18,18"
+        "U:2;-20,0,24,24,0;20,0,24,24,0",
+        "U:1;0,0,40,40,0",
+        "U:4;-36,-2,14,14,0;36,-2,14,14,0;-16,5,26,26,0;16,5,26,26,0",
+        "U:3;0,-15,24,24,4;-18,10,18,18,4;18,10,18,18,4"
     ];
     send(presets[id]);
 }
@@ -275,11 +343,15 @@ function getPos(e) {
 }
 function startDrag(e) {
     let pos = getPos(e);
-    eyes.forEach(eye => {
+    let found = false;
+    eyes.forEach((eye, i) => {
         if (pos.x >= eye.x - eye.w/2 && pos.x <= eye.x + eye.w/2 && pos.y >= eye.y - eye.h/2 && pos.y <= eye.y + eye.h/2) {
             draggingEye = eye;
+            selectEye(i);
+            found = true;
         }
     });
+    if(!found) selectEye(-1);
 }
 function moveDrag(e) {
     if(!draggingEye) return;
@@ -290,7 +362,7 @@ function moveDrag(e) {
     drawFace();
 }
 
-// --- SYSTEM FEATURES ---
+// --- SYSTEM ---
 function sendName() {
     let name = document.getElementById('rename-input').value;
     if(name) { send("N:" + name); document.getElementById('app-title').innerText = name.toUpperCase(); }
