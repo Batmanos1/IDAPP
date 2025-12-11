@@ -199,3 +199,23 @@ input:checked + .slider:before { transform: translateX(16px); }
 .fill-p { background: #ff0055; box-shadow: 0 0 8px #ff0055; }
 .fill-y { background: #ffaa00; box-shadow: 0 0 8px #ffaa00; }
 .hint { font-size: 10px; color: #444; margin-bottom: 30px; animation: bounce 2s infinite; }
+
+@keyframes angry-shake {
+    0% { transform: translate(1px, 1px) rotate(0deg); }
+    10% { transform: translate(-1px, -2px) rotate(-1deg); }
+    20% { transform: translate(-3px, 0px) rotate(1deg); }
+    30% { transform: translate(3px, 2px) rotate(0deg); }
+    40% { transform: translate(1px, -1px) rotate(1deg); }
+    50% { transform: translate(-1px, 2px) rotate(-1deg); }
+    60% { transform: translate(-3px, 1px) rotate(0deg); }
+    70% { transform: translate(3px, 1px) rotate(-1deg); }
+    80% { transform: translate(-1px, -1px) rotate(1deg); }
+    90% { transform: translate(1px, 2px) rotate(0deg); }
+    100% { transform: translate(1px, -2px) rotate(-1deg); }
+}
+
+.visor.angry-shake {
+    animation: angry-shake 0.5s;
+    border-color: #ff0000;
+    box-shadow: 0 0 30px #ff0000;
+}
