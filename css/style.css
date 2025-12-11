@@ -9,9 +9,6 @@ body.theme-christmas {
     --c: #ff3333 !important;   /* Christmas Red */
     --glow: #00ff44 !important; /* Christmas Green Glow */
     --bg: #0f0f0f;
-    /* Candy Cane Border */
-    border: 5px solid transparent;
-    border-image: repeating-linear-gradient(45deg, #ff3333 0, #ff3333 10px, #ffffff 10px, #ffffff 20px) 1;
 }
 /* Show decorations when theme is active */
 body.theme-christmas #xmas-decor,
@@ -219,3 +216,4 @@ input:checked + .slider:before { transform: translateX(16px); }
     border-color: #ff0000;
     box-shadow: 0 0 30px #ff0000;
 }
+
