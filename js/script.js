@@ -1,4 +1,4 @@
-const ENABLE_CHRISTMAS = true; 
+const ENABLE_CHRISTMAS = false; 
 
 const btnState = { 
     L: { taps: 0, timer: null }, 
@@ -500,3 +500,4 @@ function handleUpdate(event) {
     else if (type === 'A') { currentVitals.hap = parseInt(data); currentHappiness = currentVitals.hap; updateBackgroundVitals(currentVitals); updateVisorMood(currentHappiness); }
     else if (type === 'M') { let num = parseInt(data); let v = document.getElementById('visor'); let b = document.body; v.className = "visor"; b.className = ""; if(robotBaseColor) { document.documentElement.style.setProperty('--c', robotBaseColor); document.documentElement.style.setProperty('--glow', robotBaseColor); } if (num === 1) { v.classList.add('mood-happy'); b.classList.add('mood-happy'); } if (num === 2) { v.classList.add('mood-angry'); b.classList.add('mood-angry'); } if (num === 3) { v.classList.add('mood-tired'); b.classList.add('mood-tired'); } if (num === 5) { v.classList.add('mood-love'); b.classList.add('mood-love'); } if (num === 0) v.classList.remove('mood-sleep'); lastInputTime = Date.now(); }
 }
+
