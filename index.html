@@ -115,15 +115,25 @@
         </div>
     </div>
 
-    <div id="workshopModal" class="modal-overlay">
+<div id="workshopModal" class="modal-overlay">
         <div class="menu-box">
             <h3 style="margin-top:0; color:var(--c); border-bottom:1px solid #333; padding-bottom:10px;">CUSTOMIZATION</h3>
             
             <div class="section-title">FACE BUILDER</div>
+            <p style="font-size:10px; color:#666;">TAP AN EYE TO EDIT</p>
+            
             <canvas id="face-canvas" width="256" height="128"></canvas>
+            
+            <div id="eye-controls" style="display:none; background:#111; padding:10px; margin-bottom:10px; border:1px solid #333;">
+                <div class="slider-row"><span>WIDTH</span> <input type="range" id="edit-w" min="4" max="50" oninput="updateEyeParam()"></div>
+                <div class="slider-row"><span>HEIGHT</span> <input type="range" id="edit-h" min="4" max="50" oninput="updateEyeParam()"></div>
+                <div class="slider-row"><span>ROUND</span> <input type="range" id="edit-r" min="0" max="25" oninput="updateEyeParam()"></div>
+                <button class="xs-btn" onclick="deleteSelectedEye()" style="width:100%; margin-top:5px; color:#ff0055;">DELETE EYE</button>
+            </div>
+
             <div class="row-btns">
-                <button class="sm-btn" onclick="addEye()">+ EYE</button>
-                <button class="sm-btn red" onclick="clearCanvas()">CLEAR</button>
+                <button class="sm-btn" onclick="addEye()">+ ADD EYE</button>
+                <button class="sm-btn red" onclick="clearCanvas()">CLEAR ALL</button>
                 <button class="sm-btn green" onclick="uploadFace()">UPLOAD</button>
             </div>
 
@@ -142,3 +152,4 @@
     <script src="js/script.js"></script>
 </body>
 </html>
+
