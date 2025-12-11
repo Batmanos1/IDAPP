@@ -1,4 +1,4 @@
-/* IDAPP Logic - v9.0 */
+/* IDAPP Logic - v9.5 */
 
 // --- 🎄 DEVELOPER SETTINGS 🎄 ---
 const ENABLE_CHRISTMAS = true; 
@@ -18,7 +18,10 @@ window.addEventListener('load', () => {
     document.body.classList.add('offline');
     initCanvas(); 
     
-    if(ENABLE_CHRISTMAS) document.body.classList.add('theme-christmas');
+    if(ENABLE_CHRISTMAS) {
+        document.body.classList.add('theme-christmas');
+        startCartoonSnow();
+    }
 
     const visor = document.getElementById('visor');
     visor.addEventListener('click', (e) => {
@@ -37,43 +40,47 @@ window.addEventListener('load', () => {
     visor.addEventListener('pointerleave', () => moveCount = 0);
 });
 
-// --- NEW FUNCTION: RENDER VISOR LOCALLY ---
+// --- CARTOON SNOW GENERATOR ---
+function startCartoonSnow() {
+    // Spawn a flake every 200ms
+    setInterval(() => {
+        const flake = document.createElement('div');
+        flake.classList.add('snowflake');
+        // Random char
+        flake.innerText = Math.random() > 0.5 ? '❄' : '❅';
+        // Random position 0-100vw
+        flake.style.left = Math.random() * 100 + 'vw';
+        // Random fall speed (2s to 5s)
+        flake.style.animationDuration = Math.random() * 3 + 2 + 's';
+        // Random size
+        flake.style.fontSize = Math.random() * 10 + 10 + 'px';
+        
+        document.getElementById('cartoon-snow').appendChild(flake);
+        
+        // Remove after animation finishes to prevent DOM bloat
+        setTimeout(() => { flake.remove(); }, 5000);
+    }, 200);
+}
+
+// --- RENDER VISOR LOCALLY ---
 function renderLocalVisor(eyeList) {
     const visor = document.getElementById('visor');
-    visor.innerHTML = ''; // Clear existing
-    
-    // Reset bounds
+    visor.innerHTML = ''; 
     minEyeX = 1000; maxEyeX = -1000; minEyeY = 1000; maxEyeY = -1000;
-    
-    const scale = 2.2; // Scale for phone screen visibility (was 1.6)
+    const scale = 2.2; 
 
     eyeList.forEach(e => {
         let div = document.createElement('div');
         div.className = 'eye';
-        
-        let finalW = e.w * scale;
-        let finalH = e.h * scale;
-        
-        // Editor range is 0-128. Center is 64,32. 
-        // We need to shift so 64,32 maps to center of visor container
-        // Rel X = e.x - 64
-        // Rel Y = e.y - 32
-        
-        let relX = (e.x - 64) * scale;
-        let relY = (e.y - 32) * scale;
+        let finalW = e.w * scale; let finalH = e.h * scale;
+        let relX = (e.x - 64) * scale; let relY = (e.y - 32) * scale;
 
-        div.style.width = finalW + 'px';
-        div.style.height = finalH + 'px';
-        div.style.left = `calc(50% + ${relX}px)`;
-        div.style.top = `calc(50% + ${relY}px)`;
-        
-        // Apply radius
-        let rad = (e.r || 0) * scale;
-        div.style.borderRadius = rad + "px";
+        div.style.width = finalW + 'px'; div.style.height = finalH + 'px';
+        div.style.left = `calc(50% + ${relX}px)`; div.style.top = `calc(50% + ${relY}px)`;
+        let rad = (e.r || 0) * scale; div.style.borderRadius = rad + "px";
 
         visor.appendChild(div);
         
-        // Bounds for container sizing
         let halfW = finalW / 2; let halfH = finalH / 2;
         if (relX - halfW < minEyeX) minEyeX = relX - halfW;
         if (relX + halfW > maxEyeX) maxEyeX = relX + halfW;
@@ -143,7 +150,6 @@ function applyRobotIdentity(dataString) {
         updateBackgroundVitals(currentVitals);
         updateVisorMood(currentHappiness);
     }
-    // Only clear if empty, otherwise we keep what we have (useful for reconnects)
     if(document.getElementById('visor').children.length === 0) {
         document.getElementById('visor').innerHTML = '';
         minEyeX = 1000; maxEyeX = -1000; minEyeY = 1000; maxEyeY = -1000;
@@ -151,22 +157,13 @@ function applyRobotIdentity(dataString) {
 }
 
 function addDynamicEye(dataString) {
-    // This is called when robot sends 'L' packet (usually on connection)
-    // We parse it into a local object format and render
     let coords = dataString.split(',');
     let xOff = parseInt(coords[0]);
     let yOff = parseInt(coords[1]);
     let w = parseInt(coords[2]);
     let h = parseInt(coords[3]);
-    
-    // NOTE: 'L' packet doesn't send radius currently to save bandwidth
-    // We assume 50% for circle or 2px for bar
     let r = (h < 10) ? 2 : (Math.min(w,h)/2);
 
-    // To prevent clearing existing eyes when receiving multiple packets, 
-    // we need to know if this is the start. For simplicity, we just append to DOM directly here
-    // But for better syncing, let's just use the DOM append method as before
-    
     const visor = document.getElementById('visor');
     const scale = 2.2; 
     let div = document.createElement('div');
@@ -260,9 +257,8 @@ function initCanvas() {
 
 function drawFace() {
     ctx.fillStyle = "#000"; ctx.fillRect(0,0,256,128);
-    // Christmas color override for editor
-    let strokeColor = ENABLE_CHRISTMAS ? "#ff0033" : robotBaseColor;
-    let fillColor = ENABLE_CHRISTMAS ? "#ff0033" : robotBaseColor;
+    let strokeColor = ENABLE_CHRISTMAS ? "#ff3333" : robotBaseColor;
+    let fillColor = ENABLE_CHRISTMAS ? "#ff3333" : robotBaseColor;
     ctx.strokeStyle = strokeColor; ctx.lineWidth = 2; ctx.strokeRect(0,0,256,128);
     
     eyes.forEach((e, i) => {
@@ -336,12 +332,10 @@ function addEye() {
 }
 function clearCanvas() { eyes = []; selectEye(-1); drawFace(); }
 
-// --- UPDATED UPLOAD FUNCTION ---
 function uploadFace() {
     let str = `U:${eyes.length}`;
     eyes.forEach(e => { str += `;${Math.floor(e.x-64)},${Math.floor(e.y-32)},${e.w},${e.h},${e.r||0}`; });
     send(str);
-    // IMMEDIATELY update local visor
     renderLocalVisor(eyes);
     closeWorkshop();
 }
@@ -355,14 +349,11 @@ function applyPreset(id) {
     ];
     send(presets[id]);
     
-    // Reverse parse the string back into eyes array for local display
-    // U:count;x,y,w,h,r...
     let parts = presets[id].split(';');
     let count = parseInt(parts[0].split(':')[1]);
     let newEyes = [];
     for(let i=1; i<=count; i++) {
         let p = parts[i].split(',');
-        // Coords are relative (-64..64), need absolute (0..128)
         newEyes.push({
             x: parseInt(p[0]) + 64,
             y: parseInt(p[1]) + 32,
@@ -371,7 +362,7 @@ function applyPreset(id) {
             r: parseInt(p[4])
         });
     }
-    eyes = newEyes; // Sync editor array too
+    eyes = newEyes;
     drawFace();
     renderLocalVisor(newEyes);
     closeWorkshop();
