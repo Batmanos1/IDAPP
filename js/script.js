@@ -1,4 +1,4 @@
-/* IDAPP Logic - v6.0 */
+const ENABLE_CHRISTMAS = true; 
 
 const btnState = { L: { repeat: null, tapCount: 0, tapTimer: null }, R: { repeat: null, tapCount: 0, tapTimer: null } };
 let isGameRunning = false; 
@@ -15,6 +15,11 @@ window.addEventListener('load', () => {
     document.body.classList.add('offline');
     initCanvas(); 
     
+    // --- APPLY CHRISTMAS THEME ---
+    if(ENABLE_CHRISTMAS) {
+        document.body.classList.add('theme-christmas');
+    }
+
     // VISOR INTERACTIONS
     const visor = document.getElementById('visor');
     visor.addEventListener('click', (e) => {
@@ -47,7 +52,10 @@ function updateVisorMood(happiness) {
     if (happiness >= 90) { v.classList.add('mood-love'); b.classList.add('mood-love'); }
     else if (happiness > 60) { v.classList.add('mood-happy'); b.classList.add('mood-happy'); } 
     else if (happiness < 30) { v.classList.add('mood-angry'); b.classList.add('mood-angry'); }
-    if(robotBaseColor) {
+    
+    // Apply robot base color ONLY if Christmas mode is disabled
+    // If Christmas mode is ON, the CSS !important rules will handle the colors
+    if(robotBaseColor && !ENABLE_CHRISTMAS) {
         document.documentElement.style.setProperty('--c', robotBaseColor);
         document.documentElement.style.setProperty('--glow', robotBaseColor);
     }
@@ -78,8 +86,11 @@ function applyRobotIdentity(dataString) {
     }
     if(rColor) {
         robotBaseColor = rColor;
-        document.documentElement.style.setProperty('--c', rColor);
-        document.documentElement.style.setProperty('--glow', rColor);
+        // Only set variables if NOT christmas mode
+        if(!ENABLE_CHRISTMAS) {
+            document.documentElement.style.setProperty('--c', rColor);
+            document.documentElement.style.setProperty('--glow', rColor);
+        }
         document.body.classList.remove('offline');
         document.getElementById('nebula-bg').classList.add('alive');
     }
@@ -118,11 +129,6 @@ function addDynamicEye(dataString) {
     div.style.left = `calc(50% + ${finalX}px)`;
     div.style.top = `calc(50% + ${finalY}px)`;
     
-    // Auto-detect roundness for main screen view (approx based on size if not explicitly sent)
-    // Note: To perfectly sync radius from robot to phone on startup, we'd need to update the L packet.
-    // For now, we assume circle for small, rect for large, or use border-radius 50%
-    // IF the user customizes, the visualizer updates via the canvas mostly. 
-    // BUT for the main screen, let's use a standard 50% unless it looks like a bar.
     if(h < 10) div.style.borderRadius = "2px"; else div.style.borderRadius = "50%";
 
     visor.appendChild(div);
@@ -206,21 +212,22 @@ function initCanvas() {
     canvas.addEventListener('touchend', () => draggingEye = null);
 }
 
-// NEW: Draw with Rounded Rects
 function drawFace() {
     ctx.fillStyle = "#000"; ctx.fillRect(0,0,256,128);
-    ctx.strokeStyle = robotBaseColor; ctx.lineWidth = 2; ctx.strokeRect(0,0,256,128);
+    // Force colors for editor preview if Christmas mode is on
+    let strokeColor = ENABLE_CHRISTMAS ? "#ff0033" : robotBaseColor;
+    let fillColor = ENABLE_CHRISTMAS ? "#ff0033" : robotBaseColor;
+    
+    ctx.strokeStyle = strokeColor; ctx.lineWidth = 2; ctx.strokeRect(0,0,256,128);
     
     eyes.forEach((e, i) => {
-        ctx.fillStyle = (i === selectedEyeIndex) ? "#fff" : robotBaseColor;
+        ctx.fillStyle = (i === selectedEyeIndex) ? "#fff" : fillColor;
         let cx = e.x * 2; let cy = e.y * 2;
         let cw = e.w * 2; let ch = e.h * 2;
         let cr = (e.r || 0) * 2;
-        
-        // Use standard roundRect
         ctx.beginPath();
         if(ctx.roundRect) ctx.roundRect(cx - cw/2, cy - ch/2, cw, ch, cr);
-        else ctx.rect(cx - cw/2, cy - ch/2, cw, ch); // Fallback
+        else ctx.rect(cx - cw/2, cy - ch/2, cw, ch);
         ctx.fill();
     });
 }
@@ -247,25 +254,20 @@ function updateEyeParam() {
     drawFace();
 }
 
-// NEW TOOL: Center Eye
 function centerEye() {
     if(selectedEyeIndex === -1) return;
-    eyes[selectedEyeIndex].x = 64; // Center of 128
+    eyes[selectedEyeIndex].x = 64; 
     drawFace();
 }
 
-// NEW TOOL: Mirror Eye
 function mirrorEye() {
     if(selectedEyeIndex === -1) return;
     let src = eyes[selectedEyeIndex];
     let mirrorX = 128 - src.x;
-    
-    // Check if eye exists roughly there
     let found = -1;
     eyes.forEach((e, i) => {
         if(i !== selectedEyeIndex && Math.abs(e.x - mirrorX) < 5 && Math.abs(e.y - src.y) < 5) found = i;
     });
-    
     if(found > -1) {
         eyes[found].w = src.w; eyes[found].h = src.h; eyes[found].r = src.r;
     } else if(eyes.length < 8) {
@@ -288,10 +290,10 @@ function uploadFace() {
 }
 function applyPreset(id) {
     const presets = [
-        "U:2;-20,0,24,24,12;20,0,24,24,12", // Incy
-        "U:1;0,0,40,40,20", // Wisp
-        "U:4;-36,-2,14,14,7;36,-2,14,14,7;-16,5,26,26,13;16,5,26,26,13", // Weaver
-        "U:3;0,-15,24,24,2;-18,10,18,18,2;18,10,18,18,2" // Glitch
+        "U:2;-20,0,24,24,12;20,0,24,24,12", 
+        "U:1;0,0,40,40,20", 
+        "U:4;-36,-2,14,14,7;36,-2,14,14,7;-16,5,26,26,13;16,5,26,26,13", 
+        "U:3;0,-15,24,24,2;-18,10,18,18,2;18,10,18,18,2" 
     ];
     send(presets[id]);
 }
