@@ -1,9 +1,10 @@
-/* IDAPP Logic - v9.5 */
-
-// --- 🎄 DEVELOPER SETTINGS 🎄 ---
 const ENABLE_CHRISTMAS = true; 
 
-const btnState = { L: { repeat: null, tapCount: 0, tapTimer: null }, R: { repeat: null, tapCount: 0, tapTimer: null } };
+const btnState = { 
+    L: { taps: 0, timer: null }, 
+    R: { taps: 0, timer: null } 
+};
+
 let isGameRunning = false; 
 let lastInputTime = Date.now();
 let currentHappiness = 50; 
@@ -23,72 +24,123 @@ window.addEventListener('load', () => {
         startCartoonSnow();
     }
 
-    const visor = document.getElementById('visor');
-    visor.addEventListener('click', (e) => {
-        let rect = visor.getBoundingClientRect();
-        if((e.clientX - rect.left) < rect.width / 2) send('L'); else send('R');
-    });
-    let moveCount = 0;
-    visor.addEventListener('pointermove', (e) => {
-        moveCount++;
-        if(moveCount > 25) { 
-            send('P'); moveCount = 0;
-            visor.style.transform = "scale(1.05)";
-            setTimeout(() => visor.style.transform = "scale(1)", 200);
-        }
-    });
-    visor.addEventListener('pointerleave', () => moveCount = 0);
+    setupVisorInteractions();
 });
 
-// --- CARTOON SNOW GENERATOR ---
+// --- NEW VISOR INTERACTIONS (Pet vs Poke) ---
+function setupVisorInteractions() {
+    const visor = document.getElementById('visor');
+    let isDragging = false;
+    let startX = 0, startY = 0;
+    let moveDistance = 0;
+    let dragStartTime = 0;
+
+    // Helper to check if we touched an eye div
+    const isEyeTarget = (t) => t.classList.contains('eye');
+
+    visor.addEventListener('pointerdown', (e) => {
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        moveDistance = 0;
+        dragStartTime = Date.now();
+        visor.setPointerCapture(e.pointerId);
+    });
+
+    visor.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        
+        let dx = e.clientX - startX;
+        let dy = e.clientY - startY;
+        moveDistance += Math.sqrt(dx*dx + dy*dy);
+        
+        // PETTING LOGIC (Glide/Rub)
+        // Must move significantly (>30px) AND not be starting on an eye (optional constraint)
+        // Or just allow petting anywhere if moving
+        if (moveDistance > 30) {
+            // Throttle sending 'P' so we don't flood bluetooth
+            if (moveDistance % 60 < 10) { 
+                send('P'); 
+                // Visual feedback
+                visor.style.transform = `scale(1.02) rotate(${Math.sin(Date.now()/100)*1}deg)`;
+            }
+        }
+        startX = e.clientX; startY = e.clientY;
+    });
+
+    visor.addEventListener('pointerup', (e) => {
+        isDragging = false;
+        visor.style.transform = "scale(1) rotate(0deg)";
+        let duration = Date.now() - dragStartTime;
+
+        // TAP LOGIC (Short duration, low movement)
+        if (moveDistance < 10 && duration < 400) {
+            if (isEyeTarget(e.target)) {
+                // TAPPED EYE -> MAD
+                send('R'); 
+                // Shake Animation
+                visor.classList.add('mood-angry');
+                setTimeout(()=>visor.classList.remove('mood-angry'), 500);
+            } else {
+                // TAPPED EMPTY SPACE -> LOOK/PET
+                // Check if left or right side of visor
+                let rect = visor.getBoundingClientRect();
+                let relX = e.clientX - rect.left;
+                if(relX < rect.width / 2) send('L'); else send('R');
+            }
+        }
+    });
+}
+
+// --- BUTTON LOGIC (Single vs Double Tap) ---
+// HTML calls this: onclick="handleBtnInput('L')"
+window.handleBtnInput = function(id) {
+    if(isGameRunning) { send(id); return; } 
+    
+    let btn = btnState[id];
+    btn.taps++;
+    
+    // UI Feedback
+    let el = document.getElementById('btn-' + id);
+    el.classList.add('pressing');
+    setTimeout(() => el.classList.remove('pressing'), 150);
+
+    if (btn.taps === 1) {
+        // Wait 300ms to see if second tap arrives
+        btn.timer = setTimeout(() => {
+            // SINGLE TAP EXECUTED
+            if (id === 'L') send('H'); // Laugh
+            if (id === 'R') send('K'); // Skitter
+            btn.taps = 0;
+        }, 300);
+    } else {
+        // DOUBLE TAP EXECUTED
+        clearTimeout(btn.timer);
+        if (id === 'L') send('S'); // Sing
+        if (id === 'R') {
+            // Right double tap reserved
+            console.log("R-Double");
+        }
+        btn.taps = 0;
+    }
+}
+
+// --- CARTOON SNOW ---
 function startCartoonSnow() {
-    // Spawn a flake every 200ms
     setInterval(() => {
         const flake = document.createElement('div');
         flake.classList.add('snowflake');
-        // Random char
         flake.innerText = Math.random() > 0.5 ? '❄' : '❅';
-        // Random position 0-100vw
         flake.style.left = Math.random() * 100 + 'vw';
-        // Random fall speed (2s to 5s)
         flake.style.animationDuration = Math.random() * 3 + 2 + 's';
-        // Random size
         flake.style.fontSize = Math.random() * 10 + 10 + 'px';
-        
-        document.getElementById('cartoon-snow').appendChild(flake);
-        
-        // Remove after animation finishes to prevent DOM bloat
+        let container = document.getElementById('cartoon-snow') || document.body;
+        container.appendChild(flake);
         setTimeout(() => { flake.remove(); }, 5000);
-    }, 200);
+    }, 300);
 }
 
-// --- RENDER VISOR LOCALLY ---
-function renderLocalVisor(eyeList) {
-    const visor = document.getElementById('visor');
-    visor.innerHTML = ''; 
-    minEyeX = 1000; maxEyeX = -1000; minEyeY = 1000; maxEyeY = -1000;
-    const scale = 2.2; 
-
-    eyeList.forEach(e => {
-        let div = document.createElement('div');
-        div.className = 'eye';
-        let finalW = e.w * scale; let finalH = e.h * scale;
-        let relX = (e.x - 64) * scale; let relY = (e.y - 32) * scale;
-
-        div.style.width = finalW + 'px'; div.style.height = finalH + 'px';
-        div.style.left = `calc(50% + ${relX}px)`; div.style.top = `calc(50% + ${relY}px)`;
-        let rad = (e.r || 0) * scale; div.style.borderRadius = rad + "px";
-
-        visor.appendChild(div);
-        
-        let halfW = finalW / 2; let halfH = finalH / 2;
-        if (relX - halfW < minEyeX) minEyeX = relX - halfW;
-        if (relX + halfW > maxEyeX) maxEyeX = relX + halfW;
-        if (relY - halfH < minEyeY) minEyeY = relY - halfH;
-        if (relY + halfH > maxEyeY) maxEyeY = relY + halfH;
-    });
-    updateVisorGeometry();
-}
+// --- STANDARD APP LOGIC ---
 
 function checkIdleStatus() {
     if (document.getElementById('status').innerText === "ONLINE" && (Date.now() - lastInputTime > 5000)) {
@@ -199,54 +251,17 @@ function updateVisorGeometry() {
     visor.style.borderRadius = Math.min(30, rad) + "px";
 }
 
-// --- CONTROLS ---
-function btnDown(e, cmd) {
-    e.preventDefault(); lastInputTime = Date.now(); let state = btnState[cmd];
-    if (state.repeat) return; 
-    document.getElementById('btn-' + cmd).classList.add('pressing');
-    if (isGameRunning) { send(cmd); return; }
-    state.tapCount++;
-    if (state.tapCount === 1) {
-        send(cmd);
-        state.tapTimer = setTimeout(() => {
-            state.tapCount = 0; 
-            if (document.getElementById('btn-' + cmd).classList.contains('pressing')) {
-                state.repeat = setInterval(() => { send(cmd); lastInputTime = Date.now(); }, 200);
-            }
-        }, 800); 
-    } else if (state.tapCount === 2) { send(cmd); send(cmd); state.tapCount = 0; }
-}
-function btnUp(e, cmd) {
-    e.preventDefault(); lastInputTime = Date.now();
-    if (btnState[cmd].tapTimer) { clearTimeout(btnState[cmd].tapTimer); }
-    if (btnState[cmd].repeat) { clearInterval(btnState[cmd].repeat); btnState[cmd].repeat = null; }
-    document.getElementById('btn-' + cmd).classList.remove('pressing');
-}
-
-function startGame(id) { send(id); isGameRunning = true; closeMenu(); lastInputTime = Date.now(); }
-function stopGame() { send('X'); isGameRunning = false; closeMenu(); lastInputTime = Date.now(); }
-
-function openMenu() { document.getElementById('menuModal').style.display = 'flex'; send('Q'); }
-function closeMenu() { document.getElementById('menuModal').style.display = 'none'; }
-function openWorkshop() { document.getElementById('workshopModal').style.display = 'flex'; }
-function closeWorkshop() { document.getElementById('workshopModal').style.display = 'none'; }
-function forceSleep() { send('Z'); closeMenu(); document.getElementById('visor').className = "visor mood-sleep"; document.body.className = "mood-sleep"; }
-function switchTab(id) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.m-tab').forEach(el => el.classList.remove('active'));
-    document.getElementById('tab-' + id).classList.add('active');
-    event.target.classList.add('active');
-}
-
-// --- FACE BUILDER ---
+// --- WORKSHOP / EDITOR LOGIC ---
 let eyes = [{x: 44, y: 32, w: 24, h: 24, r: 12}, {x: 84, y: 32, w: 24, h: 24, r: 12}]; 
 let canvas, ctx, selectedEyeIndex = -1;
 
 function initCanvas() {
     canvas = document.getElementById('face-canvas');
+    if(!canvas) return;
     ctx = canvas.getContext('2d');
     drawFace();
     
+    // Mouse/Touch events for Editor
     canvas.addEventListener('mousedown', startDrag);
     canvas.addEventListener('touchstart', startDrag);
     canvas.addEventListener('mousemove', moveDrag);
@@ -273,6 +288,33 @@ function drawFace() {
     });
 }
 
+function renderLocalVisor(eyeList) {
+    const visor = document.getElementById('visor');
+    visor.innerHTML = ''; 
+    minEyeX = 1000; maxEyeX = -1000; minEyeY = 1000; maxEyeY = -1000;
+    const scale = 2.2; 
+
+    eyeList.forEach(e => {
+        let div = document.createElement('div');
+        div.className = 'eye';
+        let finalW = e.w * scale; let finalH = e.h * scale;
+        let relX = (e.x - 64) * scale; let relY = (e.y - 32) * scale;
+
+        div.style.width = finalW + 'px'; div.style.height = finalH + 'px';
+        div.style.left = `calc(50% + ${relX}px)`; div.style.top = `calc(50% + ${relY}px)`;
+        let rad = (e.r || 0) * scale; div.style.borderRadius = rad + "px";
+
+        visor.appendChild(div);
+        
+        let halfW = finalW / 2; let halfH = finalH / 2;
+        if (relX - halfW < minEyeX) minEyeX = relX - halfW;
+        if (relX + halfW > maxEyeX) maxEyeX = relX + halfW;
+        if (relY - halfH < minEyeY) minEyeY = relY - halfH;
+        if (relY + halfH > maxEyeY) maxEyeY = relY + halfH;
+    });
+    updateVisorGeometry();
+}
+
 function selectEye(index) {
     selectedEyeIndex = index;
     let controls = document.getElementById('eye-controls');
@@ -287,7 +329,7 @@ function selectEye(index) {
     drawFace();
 }
 
-function updateEyeParam() {
+window.updateEyeParam = function() {
     if(selectedEyeIndex === -1) return;
     eyes[selectedEyeIndex].w = parseInt(document.getElementById('edit-w').value);
     eyes[selectedEyeIndex].h = parseInt(document.getElementById('edit-h').value);
@@ -295,34 +337,19 @@ function updateEyeParam() {
     drawFace();
 }
 
-function centerEye() {
-    if(selectedEyeIndex === -1) return;
-    eyes[selectedEyeIndex].x = 64; 
-    drawFace();
-}
-
-function mirrorEye() {
+window.centerEye = function() { if(selectedEyeIndex !== -1) { eyes[selectedEyeIndex].x = 64; drawFace(); } }
+window.mirrorEye = function() {
     if(selectedEyeIndex === -1) return;
     let src = eyes[selectedEyeIndex];
     let mirrorX = 128 - src.x;
     let found = -1;
-    eyes.forEach((e, i) => {
-        if(i !== selectedEyeIndex && Math.abs(e.x - mirrorX) < 5 && Math.abs(e.y - src.y) < 5) found = i;
-    });
-    if(found > -1) {
-        eyes[found].w = src.w; eyes[found].h = src.h; eyes[found].r = src.r;
-    } else if(eyes.length < 8) {
-        eyes.push({x: mirrorX, y: src.y, w: src.w, h: src.h, r: src.r});
-    }
+    eyes.forEach((e, i) => { if(i !== selectedEyeIndex && Math.abs(e.x - mirrorX) < 5 && Math.abs(e.y - src.y) < 5) found = i; });
+    if(found > -1) { eyes[found].w = src.w; eyes[found].h = src.h; eyes[found].r = src.r; } 
+    else if(eyes.length < 8) { eyes.push({x: mirrorX, y: src.y, w: src.w, h: src.h, r: src.r}); }
     drawFace();
 }
-
-function deleteSelectedEye() {
-    if(selectedEyeIndex === -1) return;
-    eyes.splice(selectedEyeIndex, 1);
-    selectEye(-1);
-}
-function addEye() { 
+window.deleteSelectedEye = function() { if(selectedEyeIndex !== -1) { eyes.splice(selectedEyeIndex, 1); selectEye(-1); } }
+window.addEye = function() { 
     if(eyes.length < 8) { 
         let offsetX = (eyes.length % 2 === 0) ? 20 : -20;
         let offsetY = (eyes.length > 2) ? 10 : 0;
@@ -330,17 +357,15 @@ function addEye() {
         selectEye(eyes.length-1); 
     } 
 }
-function clearCanvas() { eyes = []; selectEye(-1); drawFace(); }
-
-function uploadFace() {
+window.clearCanvas = function() { eyes = []; selectEye(-1); drawFace(); }
+window.uploadFace = function() {
     let str = `U:${eyes.length}`;
     eyes.forEach(e => { str += `;${Math.floor(e.x-64)},${Math.floor(e.y-32)},${e.w},${e.h},${e.r||0}`; });
     send(str);
     renderLocalVisor(eyes);
     closeWorkshop();
 }
-
-function applyPreset(id) {
+window.applyPreset = function(id) {
     const presets = [
         "U:2;-20,0,24,24,12;20,0,24,24,12", 
         "U:1;0,0,40,40,20", 
@@ -348,19 +373,12 @@ function applyPreset(id) {
         "U:3;0,-15,24,24,2;-18,10,18,18,2;18,10,18,18,2" 
     ];
     send(presets[id]);
-    
     let parts = presets[id].split(';');
     let count = parseInt(parts[0].split(':')[1]);
     let newEyes = [];
     for(let i=1; i<=count; i++) {
         let p = parts[i].split(',');
-        newEyes.push({
-            x: parseInt(p[0]) + 64,
-            y: parseInt(p[1]) + 32,
-            w: parseInt(p[2]),
-            h: parseInt(p[3]),
-            r: parseInt(p[4])
-        });
+        newEyes.push({ x: parseInt(p[0]) + 64, y: parseInt(p[1]) + 32, w: parseInt(p[2]), h: parseInt(p[3]), r: parseInt(p[4]) });
     }
     eyes = newEyes;
     drawFace();
@@ -398,20 +416,35 @@ function moveDrag(e) {
     drawFace();
 }
 
-// --- SYSTEM ---
-function sendName() { let name = document.getElementById('rename-input').value; if(name) { send("N:" + name); document.getElementById('app-title').innerText = name.toUpperCase(); } }
-function sendWeather() { let type = Math.random() > 0.5 ? 'R' : 'S'; send("W:" + type); }
+// --- GENERAL UTILS ---
+function startGame(id) { send(id); isGameRunning = true; closeMenu(); lastInputTime = Date.now(); }
+function stopGame() { send('X'); isGameRunning = false; closeMenu(); lastInputTime = Date.now(); }
+function openMenu() { document.getElementById('menuModal').style.display = 'flex'; send('Q'); }
+function closeMenu() { document.getElementById('menuModal').style.display = 'none'; }
+function openWorkshop() { document.getElementById('workshopModal').style.display = 'flex'; }
+function closeWorkshop() { document.getElementById('workshopModal').style.display = 'none'; }
+function forceSleep() { send('Z'); closeMenu(); document.getElementById('visor').className = "visor mood-sleep"; document.body.className = "mood-sleep"; }
+window.sendName = function() { let name = document.getElementById('rename-input').value; if(name) { send("N:" + name); document.getElementById('app-title').innerText = name.toUpperCase(); } }
+window.sendWeather = function() { let type = Math.random() > 0.5 ? 'R' : 'S'; send("W:" + type); }
+window.switchTab = function(id) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.m-tab').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + id).classList.add('active');
+    event.target.classList.add('active');
+}
 
 // --- JOYSTICK ---
 let joyZone = document.getElementById('joystick-zone');
 let stick = document.getElementById('stick');
 let isDraggingJoy = false;
-joyZone.addEventListener('mousedown', () => isDraggingJoy = true);
-joyZone.addEventListener('touchstart', () => isDraggingJoy = true);
-window.addEventListener('mouseup', endJoy);
-window.addEventListener('touchend', endJoy);
-window.addEventListener('mousemove', moveJoy);
-window.addEventListener('touchmove', moveJoy);
+if(joyZone) {
+    joyZone.addEventListener('mousedown', () => isDraggingJoy = true);
+    joyZone.addEventListener('touchstart', () => isDraggingJoy = true);
+    window.addEventListener('mouseup', endJoy);
+    window.addEventListener('touchend', endJoy);
+    window.addEventListener('mousemove', moveJoy);
+    window.addEventListener('touchmove', moveJoy);
+}
 function moveJoy(e) {
     if (!isDraggingJoy) return; e.preventDefault();
     const rect = joyZone.getBoundingClientRect();
