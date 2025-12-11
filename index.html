@@ -18,17 +18,23 @@
 </head>
 <body>
     <div id="nebula-bg"></div>
+    
     <div id="connectOverlay" style="position:fixed; top:calc(20px + env(safe-area-inset-top)); right:20px; z-index:99;">
-        <button onclick="connectBLE()" style="background:none; border:1px solid #0ff; color:#0ff; padding:5px 10px; cursor:pointer;">CONNECT</button>
+        <button onclick="connectBLE()" class="connect-btn">CONNECT</button>
+    </div>
+
+    <div id="editOverlay" style="position:fixed; top:calc(20px + env(safe-area-inset-top)); left:20px; z-index:99;">
+        <button onclick="openWorkshop()" class="icon-btn">✎</button>
     </div>
 
     <div id="app-container">
         <div class="page" id="p1">
-            <div>
-                <h1 id="app-title">IDAPP</h1>
+            <div style="margin-top: 50px;"> <h1 id="app-title">IDAPP</h1>
                 <div class="subtitle" id="app-type">UNIVERSAL CONTROLLER</div>
                 <div id="status">OFFLINE</div>
-                <div id="coin-box" style="display:none;">COINS: <span id="val-coins">0</span></div>
+                <div id="coin-box" style="display:none; color:#ffd700; font-weight:bold; margin-top:5px;">
+                    $<span id="val-coins">0</span>
+                </div>
             </div>
 
             <div class="visor-container">
@@ -37,16 +43,11 @@
             </div>
 
             <div class="controls">
-                <!-- UPDATED: GENERAL BUTTONS "L" & "R" -->
-                <div class="btn-round pink" id="btn-L" onpointerdown="btnDown(event, 'L')" onpointerup="btnUp(event, 'L')" onpointerleave="btnUp(event, 'L')" oncontextmenu="return false;">
-                    L
-                </div>
+                <div class="btn-round pink" id="btn-L" onpointerdown="btnDown(event, 'L')" onpointerup="btnUp(event, 'L')" onpointerleave="btnUp(event, 'L')" oncontextmenu="return false;">L</div>
                 
                 <div class="btn-round menu-btn" onclick="openMenu()">MENU</div>
                 
-                <div class="btn-round purp" id="btn-R" onpointerdown="btnDown(event, 'R')" onpointerup="btnUp(event, 'R')" onpointerleave="btnUp(event, 'R')" oncontextmenu="return false;">
-                    R
-                </div>
+                <div class="btn-round purp" id="btn-R" onpointerdown="btnDown(event, 'R')" onpointerup="btnUp(event, 'R')" onpointerleave="btnUp(event, 'R')" oncontextmenu="return false;">R</div>
             </div>
             
             <div class="hint" style="margin-bottom: max(30px, env(safe-area-inset-bottom));">SWIPE UP FOR VITALS</div>
@@ -64,31 +65,77 @@
         </div>
     </div>
 
-    <div id="menuModal">
+    <div id="menuModal" class="modal-overlay">
         <div class="menu-box">
-            <div class="cat-header" onclick="toggleCat('games')">GAMES <span>▼</span></div>
-            <div id="cat-games" class="cat-content">
+            <div class="modal-tabs">
+                <button class="m-tab active" onclick="switchTab('games')">GAMES</button>
+                <button class="m-tab" onclick="switchTab('puppet')">PUPPET</button>
+                <button class="m-tab" onclick="switchTab('sys')">SYSTEM</button>
+            </div>
+
+            <div id="tab-games" class="tab-content active">
                 <button class="menu-item" onclick="startGame('1')">MEMORY <span class="score-badge" id="hs-mem">HS: -</span></button>
                 <button class="menu-item" onclick="startGame('2')">REFLEX <span class="score-badge" id="hs-ref">HS: -</span></button>
                 <button class="menu-item" onclick="startGame('3')">SLOTS <span class="score-badge" id="hs-slot">STRK: -</span></button>
                 <button class="menu-item stop-btn" onclick="stopGame()">STOP CURRENT GAME</button>
+                <button class="menu-item" onclick="send('F')" style="margin-top:10px; color:#ffaa00; border-color:#ffaa00;">BUY FOOD ($10)</button>
             </div>
 
-            <div class="cat-header" onclick="toggleCat('store')" style="margin-top:10px;">STORE <span>▼</span></div>
-            <div id="cat-store" class="cat-content">
-                <button class="menu-item" onclick="send('F')">BUY FOOD (10 COINS)</button>
+            <div id="tab-puppet" class="tab-content">
+                <div class="joystick-wrapper">
+                    <div id="joystick-zone"><div id="stick"></div></div>
+                </div>
+                <div class="hint-text">DRAG TO LOOK AROUND</div>
+                <div class="row-btns" style="margin-top:10px;">
+                    <button class="sm-btn" onclick="send('L')">POKE L</button>
+                    <button class="sm-btn" onclick="send('R')">POKE R</button>
+                </div>
             </div>
 
-            <div class="cat-header" onclick="toggleCat('sys')" style="margin-top:10px;">SYSTEM <span>▼</span></div>
-            <div id="cat-sys" class="cat-content">
+            <div id="tab-sys" class="tab-content">
+                <div class="section-title">IDENTITY</div>
+                <div class="row-btns">
+                    <input type="text" id="rename-input" placeholder="NEW NAME" maxlength="10">
+                    <button class="sm-btn" onclick="sendName()">SAVE</button>
+                </div>
+
+                <div class="section-title" style="margin-top:15px;">SETTINGS</div>
                 <div class="menu-item">
                     <span>SOUND</span> 
                     <label class="switch"><input type="checkbox" checked onchange="send('V')"><span class="slider round"></span></label>
                 </div>
+                <div class="menu-item">
+                    <span>WEATHER SYNC</span>
+                    <button class="xs-btn" onclick="sendWeather()">SYNC</button>
+                </div>
                 <button class="menu-item" onclick="forceSleep()">FORCE SLEEP MODE</button>
             </div>
             
-            <div class="close-txt" onclick="closeMenu()">[ CLOSE DATA PAD ]</div>
+            <div class="close-txt" onclick="closeMenu()">[ CLOSE MENU ]</div>
+        </div>
+    </div>
+
+    <div id="workshopModal" class="modal-overlay">
+        <div class="menu-box">
+            <h3 style="margin-top:0; color:var(--c); border-bottom:1px solid #333; padding-bottom:10px;">CUSTOMIZATION</h3>
+            
+            <div class="section-title">FACE BUILDER</div>
+            <canvas id="face-canvas" width="256" height="128"></canvas>
+            <div class="row-btns">
+                <button class="sm-btn" onclick="addEye()">+ EYE</button>
+                <button class="sm-btn red" onclick="clearCanvas()">CLEAR</button>
+                <button class="sm-btn green" onclick="uploadFace()">UPLOAD</button>
+            </div>
+
+            <div class="section-title" style="margin-top:15px;">PRESETS</div>
+            <div class="row-btns">
+                <button class="sm-btn" onclick="applyPreset(0)">INCY</button>
+                <button class="sm-btn" onclick="applyPreset(1)">WISP</button>
+                <button class="sm-btn" onclick="applyPreset(2)">WEAVER</button>
+                <button class="sm-btn" onclick="applyPreset(3)">GLITCH</button>
+            </div>
+
+            <div class="close-txt" onclick="closeWorkshop()">[ EXIT WORKSHOP ]</div>
         </div>
     </div>
 
