@@ -4,12 +4,19 @@ let lastInputTime = Date.now();
 let currentHappiness = 50; 
 const initialVitalStates = { hap: 50, hun: 80, eng: 10 };
 
+// --- VISUAL SCALING FACTOR ---
+// Robot Screen is 128px wide. App Visor is 240px wide.
+// 240 / 128 ≈ 1.8
+// We use this to make small robot values look big on the phone screen.
+const S = 1.8; 
+
 // --- DESIGNER STATE ---
+// Default "Incy" Layout (Optimized for 128x64 Robot Screen)
 let customEyes = [
-    {id:0, w:15, h:15, r:50, x:-36, y:0},  // Left Outer (Moved from -50 to -36)
-    {id:1, w:25, h:25, r:50, x:-16, y:0},  // Left Inner (Moved from -20 to -16)
-    {id:2, w:25, h:25, r:50, x:16, y:0},   // Right Inner (Moved from 20 to 16)
-    {id:3, w:15, h:15, r:50, x:36, y:0}    // Right Outer (Moved from 50 to 36)
+    {id:0, w:15, h:15, r:50, x:-36, y:0},  // Left Outer
+    {id:1, w:25, h:25, r:50, x:-16, y:0},  // Left Inner
+    {id:2, w:25, h:25, r:50, x:16, y:0},   // Right Inner
+    {id:3, w:15, h:15, r:50, x:36, y:0}    // Right Outer
 ];
 let selectedEyeIndex = -1;
 
@@ -57,17 +64,17 @@ function closeDesigner() {
     renderEyesToMainVisor();
 }
 
-// [NEW] RENAME FUNCTION
+// RENAME FUNCTION
 function renameRobot() {
     let name = document.getElementById('robot-name-input').value;
     if(name && name.length > 0) {
         send('N:' + name);
-        // Temporarily update title immediately for feedback
         document.getElementById('app-title').innerText = name.toUpperCase();
         closeDesigner();
     }
 }
 
+// --- PRESETS (ALL SCALED DOWN FOR ROBOT) ---
 function loadPreset(name) {
     if(name === 'incy') {
         customEyes = [
@@ -79,21 +86,21 @@ function loadPreset(name) {
     }
     else if(name === 'glitch') {
         customEyes = [
-            {id:0, w:20, h:40, r:0, x:-35, y:-10},
-            {id:1, w:40, h:20, r:0, x:35, y:10},
-            {id:2, w:10, h:10, r:50, x:0, y:0}
+            {id:0, w:14, h:28, r:0, x:-25, y:-8}, // Reduced from 20x40
+            {id:1, w:28, h:14, r:0, x:25, y:8},   // Reduced from 40x20
+            {id:2, w:7, h:7, r:50, x:0, y:0}      // Reduced from 10x10
         ];
     }
     else if(name === 'weaver') {
         customEyes = [
-            {id:0, w:15, h:15, r:50, x:-40, y:-20}, {id:1, w:15, h:15, r:50, x:40, y:-20},
-            {id:2, w:25, h:25, r:50, x:-20, y:-10}, {id:3, w:25, h:25, r:50, x:20, y:-10},
-            {id:4, w:10, h:10, r:50, x:-30, y:20},  {id:5, w:10, h:10, r:50, x:30, y:20}
+            {id:0, w:10, h:10, r:50, x:-28, y:-14}, {id:1, w:10, h:10, r:50, x:28, y:-14}, // Top Pair
+            {id:2, w:18, h:18, r:50, x:-14, y:-7},  {id:3, w:18, h:18, r:50, x:14, y:-7},  // Mid Pair
+            {id:4, w:7, h:7, r:50, x:-21, y:14},    {id:5, w:7, h:7, r:50, x:21, y:14}     // Bot Pair
         ];
     }
     else if(name === 'cyclops') {
         customEyes = [
-            {id:0, w:55, h:55, r:50, x:0, y:0}
+            {id:0, w:40, h:40, r:50, x:0, y:0} // Reduced from 55x55
         ];
     }
     selectedEyeIndex = -1; 
@@ -109,11 +116,13 @@ function renderEyesToMainVisor() {
     customEyes.forEach(eye => {
         let el = document.createElement('div');
         el.className = 'eye';
-        el.style.width = eye.w + 'px';
-        el.style.height = eye.h + 'px';
+        // APPLY VISUAL SCALING (Multiplier S)
+        el.style.width = (eye.w * S) + 'px';
+        el.style.height = (eye.h * S) + 'px';
         el.style.borderRadius = eye.r + '%';
-        el.style.left = `calc(50% + ${eye.x}px)`;
-        el.style.top = `calc(50% + ${eye.y}px)`;
+        // Scale Position from Center
+        el.style.left = `calc(50% + ${eye.x * S}px)`;
+        el.style.top = `calc(50% + ${eye.y * S}px)`;
         v.appendChild(el);
     });
 }
@@ -125,11 +134,14 @@ function renderDesignerUI() {
         let el = document.createElement('div');
         el.className = 'eye';
         if (idx === selectedEyeIndex) el.style.border = "1px solid #fff"; 
-        el.style.width = eye.w + 'px';
-        el.style.height = eye.h + 'px';
+        
+        // APPLY VISUAL SCALING HERE TOO
+        el.style.width = (eye.w * S) + 'px';
+        el.style.height = (eye.h * S) + 'px';
         el.style.borderRadius = eye.r + '%';
-        el.style.left = `calc(50% + ${eye.x}px)`;
-        el.style.top = `calc(50% + ${eye.y}px)`;
+        el.style.left = `calc(50% + ${eye.x * S}px)`;
+        el.style.top = `calc(50% + ${eye.y * S}px)`;
+        
         pv.appendChild(el);
     });
 
@@ -147,6 +159,7 @@ function renderDesignerUI() {
     if (selectedEyeIndex > -1) {
         controls.classList.add('active');
         let e = customEyes[selectedEyeIndex];
+        // Sliders still control the RAW (Small) values for the robot
         document.getElementById('inp-w').value = e.w; document.getElementById('val-w').innerText = e.w;
         document.getElementById('inp-h').value = e.h; document.getElementById('val-h').innerText = e.h;
         document.getElementById('inp-r').value = e.r; document.getElementById('val-r').innerText = e.r;
@@ -161,7 +174,7 @@ function selectEye(idx) { selectedEyeIndex = idx; renderDesignerUI(); }
 
 function addEye() {
     if (customEyes.length >= 8) return; 
-    // [UPDATED] Default new eye is smaller (20x20) to fit screen better
+    // New Eye Default: 20px (Small for Robot, will look like ~36px in App)
     customEyes.push({id: Date.now(), w:20, h:20, r:50, x:0, y:0});
     selectEye(customEyes.length - 1);
 }
@@ -193,6 +206,7 @@ function updateEyeParam(param, val) {
 
 function saveAndUpload() {
     localStorage.setItem('idapp_design', JSON.stringify(customEyes));
+    // Send raw (small) values to Robot
     let dataStr = "U:" + customEyes.length;
     customEyes.forEach(e => {
         dataStr += `;${e.x},${e.y},${e.w},${e.h},${e.r}`;
@@ -223,7 +237,7 @@ function updateBackgroundVitals(vitals) {
 }
 
 function btnDown(e, cmd) {
-    if(document.body.classList.contains('offline')) return; // Disable when offline
+    if(document.body.classList.contains('offline')) return; 
     e.preventDefault(); 
     lastInputTime = Date.now(); 
     let state = btnState[cmd];
@@ -258,7 +272,7 @@ function startGame(id) { send(id); isGameRunning = true; closeMenu(); lastInputT
 function stopGame() { send('X'); isGameRunning = false; closeMenu(); lastInputTime = Date.now(); }
 
 function openMenu() { 
-    if(document.body.classList.contains('offline')) return; // Disable menu when offline
+    if(document.body.classList.contains('offline')) return; 
     let m = document.getElementById('menuModal');
     m.style.display = 'flex';
     setTimeout(() => m.classList.add('visible'), 10);
@@ -277,7 +291,7 @@ let startY = 0;
 const container = document.getElementById('app-container');
 document.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: false});
 document.addEventListener('touchend', e => { 
-    if(document.body.classList.contains('offline')) return; // Disable swipe when offline
+    if(document.body.classList.contains('offline')) return; 
     if (Math.abs(startY - e.changedTouches[0].clientY) > 50) scrollToPage(startY > e.changedTouches[0].clientY ? 2 : 1); 
 }, {passive: false});
 
@@ -301,7 +315,7 @@ async function connectBLE() {
         charTX.addEventListener('characteristicvaluechanged', handleUpdate);
         
         // SUCCESS: "Boot Up" the UI
-        document.body.classList.remove('offline'); // <--- LIFE!
+        document.body.classList.remove('offline'); 
         document.getElementById('status').innerText = "ONLINE";
         document.getElementById('status').style.pointerEvents = "none";
         document.getElementById('status').style.color = "#00ff88";
@@ -317,7 +331,7 @@ async function connectBLE() {
 
 function onDisc() {
     // DISCONNECT: Kill the UI
-    document.body.classList.add('offline'); // <--- DEATH
+    document.body.classList.add('offline'); 
     
     let s = document.getElementById('status');
     s.innerText = "OFFLINE - TAP TO CONNECT";
@@ -326,8 +340,6 @@ function onDisc() {
 
     document.getElementById('coin-box').style.display = 'none';
     document.getElementById('visor').className = "visor";
-    
-    // Clear the eyes
     document.getElementById('visor').innerHTML = '';
     
     scrollToPage(1);
@@ -348,7 +360,6 @@ function handleUpdate(event) {
         let idParts = data.split('|');
         if(idParts[1]) {
             document.getElementById('app-title').innerText = idParts[1].toUpperCase(); 
-            // [NEW] Populate Rename Field
             document.getElementById('robot-name-input').value = idParts[1];
         }
         if(idParts[0]) document.getElementById('app-type').innerText = "TYPE: " + idParts[0].toUpperCase(); 
