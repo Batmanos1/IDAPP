@@ -11,6 +11,7 @@ let isGameRunning = false;
 let lastInputTime = Date.now();
 let currentHappiness = 50; 
 let robotBaseColor = "#00e5ff"; 
+let weatherAutoInterval = null;
 
 // Canvas / Editor Vars
 let eyes = [{x: 44, y: 32, w: 24, h: 24, r: 12}, {x: 84, y: 32, w: 24, h: 24, r: 12}]; 
@@ -23,7 +24,7 @@ window.addEventListener('load', () => {
     initCanvas(); 
     setupVisorInteractions();
     setupJoystick();
-    renderLocalVisor(eyes); // Show default eyes immediately
+    renderLocalVisor(eyes); 
 });
 
 // ==========================================
@@ -42,7 +43,6 @@ async function connectBLE() {
         
         document.getElementById('status').innerText = "ONLINE"; 
         document.getElementById('connectOverlay').style.display = 'none';
-        document.getElementById('weather-box').style.display = 'flex';
         lastInputTime = Date.now(); 
     } catch (e) { console.log(e); }
 }
@@ -50,8 +50,8 @@ async function connectBLE() {
 function onDisc() {
     document.getElementById('status').innerText = "OFFLINE"; 
     document.getElementById('connectOverlay').style.display = 'block'; 
-    document.getElementById('weather-box').style.display = 'none';
     document.body.classList.add('offline'); 
+    if(weatherAutoInterval) clearInterval(weatherAutoInterval);
 }
 
 async function send(cmd) { 
@@ -67,7 +67,7 @@ function handleUpdate(event) {
     else if (type === 'L') addDynamicEye(data);
     else if (type === 'C') { document.getElementById('val-coins').innerText = data; }
     else if (type === 'M') updateMood(parseInt(data));
-    else if (type === 'T') { /* Handle text if needed */ }
+    else if (type === 'A') { updateVitals(parseInt(data)); } // Simple Affection Update
 }
 
 function applyRobotIdentity(data) {
@@ -80,6 +80,14 @@ function applyRobotIdentity(data) {
         document.getElementById('coin-box').style.display = 'block';
         document.getElementById('val-coins').innerText = parts[2];
     }
+    // Update Vitals Bars if data exists
+    if (parts.length >= 12) {
+        updateBackgroundVitals({
+            hap: parseInt(parts[9]),
+            hun: parseInt(parts[10]),
+            eng: parseInt(parts[11])
+        });
+    }
     if (parts.length > 3 && !document.body.classList.contains('skin-christmas')) {
         robotBaseColor = parts[3];
         document.documentElement.style.setProperty('--c', robotBaseColor);
@@ -87,13 +95,27 @@ function applyRobotIdentity(data) {
     }
 }
 
+function updateVitals(aff) {
+    document.getElementById('bar-hap').style.width = aff + '%';
+    document.getElementById('val-hap').innerText = aff + '%';
+}
+
+function updateBackgroundVitals(v) {
+    document.getElementById('bar-hap').style.width = v.hap + '%';
+    document.getElementById('val-hap').innerText = v.hap + '%';
+    document.getElementById('bar-hun').style.width = v.hun + '%';
+    document.getElementById('val-hun').innerText = v.hun + '%';
+    document.getElementById('bar-eng').style.width = v.eng + '%';
+    document.getElementById('val-eng').innerText = v.eng + '%';
+}
+
 // ==========================================
-//  INTERACTION & CONTROLS
+//  INTERACTION
 // ==========================================
 function setupVisorInteractions() {
     const v = document.getElementById('visor');
     if(!v) return;
-    v.addEventListener('pointerdown', () => send('P')); // Poke = Purr
+    v.addEventListener('pointerdown', () => send('P')); 
 }
 
 window.handleBtnInput = function(id) {
@@ -104,20 +126,18 @@ window.handleBtnInput = function(id) {
 
     if (btn.taps === 1) {
         btn.timer = setTimeout(() => {
-            if (id === 'L') send('H'); // Happy
-            if (id === 'R') send('K'); // Skitter
+            if (id === 'L') send('H'); if (id === 'R') send('K');
             btn.taps = 0;
         }, 300);
     } else {
         clearTimeout(btn.timer);
-        if (id === 'L') send('S'); // Sing
+        if (id === 'L') send('S');
         btn.taps = 0;
     }
 }
 function btnDown(k) { handleBtnInput(k); }
 function btnUp(k) { } 
 
-// JOYSTICK LOGIC
 function setupJoystick() {
     let zone = document.getElementById('joystick-zone');
     let stick = document.getElementById('stick');
@@ -128,19 +148,16 @@ function setupJoystick() {
         const rect = zone.getBoundingClientRect();
         const cX = e.touches ? e.touches[0].clientX : e.clientX;
         const cY = e.touches ? e.touches[0].clientY : e.clientY;
-        let x = cX - rect.left - 70; let y = cY - rect.top - 70; // 70 is half of 140px width
+        let x = cX - rect.left - 70; let y = cY - rect.top - 70; 
         let dist = Math.sqrt(x*x + y*y);
         if (dist > 50) { x = (x / dist) * 50; y = (y / dist) * 50; }
-        
         stick.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
         
-        // Map to -50 to 50 range for robot
-        let sx = Math.floor(x); let sy = Math.floor(y * 0.6); // Y is usually less sensitive
+        let sx = Math.floor(x); let sy = Math.floor(y * 0.6); 
         if (Math.random() > 0.8) send(`J:${sx},${sy}`);
     };
     
     const end = () => { drag = false; stick.style.transform = "translate(-50%, -50%)"; send("J:0,0"); };
-    
     zone.addEventListener('mousedown', () => drag = true);
     zone.addEventListener('touchstart', () => drag = true);
     window.addEventListener('mousemove', move);
@@ -150,94 +167,12 @@ function setupJoystick() {
 }
 
 // ==========================================
-//  WORKSHOP & EDITOR
-// ==========================================
-function initCanvas() {
-    canvas = document.getElementById('face-canvas');
-    if(!canvas) return;
-    ctx = canvas.getContext('2d');
-    
-    const getPos = (e) => {
-        const r = canvas.getBoundingClientRect();
-        const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
-        const y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
-        return { x: x * (256/r.width), y: y * (128/r.height) };
-    };
-    
-    const start = (e) => {
-        let p = getPos(e);
-        let found = false;
-        eyes.forEach((eye, i) => {
-            if (p.x >= (eye.x*2)-eye.w && p.x <= (eye.x*2)+eye.w && p.y >= (eye.y*2)-eye.h && p.y <= (eye.y*2)+eye.h) {
-                draggingEye = eye; selectedEyeIndex = i; found = true;
-                document.getElementById('eye-controls').style.display = 'flex';
-                document.getElementById('edit-w').value = eye.w;
-                document.getElementById('edit-h').value = eye.h;
-                document.getElementById('edit-r').value = eye.r || 0;
-            }
-        });
-        if(!found) { selectedEyeIndex = -1; document.getElementById('eye-controls').style.display = 'none'; }
-        drawFace();
-    };
-    
-    const move = (e) => {
-        if(!draggingEye) return; e.preventDefault();
-        let p = getPos(e);
-        draggingEye.x = Math.floor(p.x / 2); draggingEye.y = Math.floor(p.y / 2);
-        drawFace();
-    };
-    
-    canvas.addEventListener('mousedown', start); canvas.addEventListener('touchstart', start);
-    canvas.addEventListener('mousemove', move); canvas.addEventListener('touchmove', move);
-    window.addEventListener('mouseup', () => draggingEye=null); window.addEventListener('touchend', () => draggingEye=null);
-}
-
-function drawFace() {
-    ctx.fillStyle = "#000"; ctx.fillRect(0,0,256,128);
-    let col = document.body.classList.contains('skin-christmas') ? "#D42426" : robotBaseColor;
-    ctx.strokeStyle = "#333"; ctx.lineWidth = 2; ctx.strokeRect(0,0,256,128);
-    
-    eyes.forEach((e, i) => {
-        ctx.fillStyle = (i === selectedEyeIndex) ? "#FFF" : col;
-        ctx.beginPath();
-        let x = e.x*2 - e.w, y = e.y*2 - e.h, w = e.w*2, h = e.h*2;
-        if(ctx.roundRect) ctx.roundRect(x, y, w, h, (e.r||0)*2); else ctx.rect(x,y,w,h);
-        ctx.fill();
-    });
-}
-
-window.addEye = function() { eyes.push({x: 64, y: 32, w: 24, h: 24, r: 5}); selectedEyeIndex = eyes.length-1; drawFace(); };
-window.clearCanvas = function() { eyes = []; selectedEyeIndex = -1; drawFace(); };
-window.updateEyeParam = function() {
-    if(selectedEyeIndex === -1) return;
-    eyes[selectedEyeIndex].w = parseInt(document.getElementById('edit-w').value);
-    eyes[selectedEyeIndex].h = parseInt(document.getElementById('edit-h').value);
-    eyes[selectedEyeIndex].r = parseInt(document.getElementById('edit-r').value);
-    drawFace();
-};
-window.uploadFace = function() {
-    let str = `U:${eyes.length}`;
-    eyes.forEach(e => { str += `;${e.x-64},${e.y-32},${e.w},${e.h},${e.r||0}`; });
-    send(str); renderLocalVisor(eyes); closeWorkshop();
-};
-
-function renderLocalVisor(list) {
-    let v = document.getElementById('visor'); v.innerHTML = '';
-    list.forEach(e => {
-        let d = document.createElement('div'); d.className = 'eye';
-        d.style.width = (e.w * 2.2) + 'px'; d.style.height = (e.h * 2.2) + 'px';
-        d.style.left = `calc(50% + ${(e.x - 64)*2.2}px)`; d.style.top = `calc(50% + ${(e.y - 32)*2.2}px)`;
-        d.style.borderRadius = ((e.r||0)*2.2) + 'px';
-        v.appendChild(d);
-    });
-}
-
-// ==========================================
-//  UTILS (Weather, Skins, Rename)
+//  SYSTEM, WEATHER & MENUS
 // ==========================================
 function syncWeather() {
     let btn = document.getElementById('btn-sync'); btn.innerText = "WAIT...";
     if (!navigator.geolocation) return;
+    
     navigator.geolocation.getCurrentPosition(async (pos) => {
         try {
             let res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&current_weather=true`);
@@ -245,22 +180,31 @@ function syncWeather() {
             let temp = Math.round(data.current_weather.temperature);
             let code = data.current_weather.weathercode >= 51 ? 1 : 0;
             send(`W:${temp},${code}`);
-            btn.innerText = `SENT ${temp}°C`; setTimeout(() => btn.innerText = "☁ SYNC WEATHER", 3000);
+            btn.innerText = `UPDATED: ${temp}°C`;
+            
+            // AUTO UPDATE LOGIC
+            if (!weatherAutoInterval) {
+                 weatherAutoInterval = setInterval(syncWeather, 1800000); // 30 Minutes
+            }
         } catch(e) { btn.innerText = "ERROR"; }
     });
 }
 
 function setSkin(name) {
-    document.body.className = ""; document.querySelectorAll('.skin-dot').forEach(d => d.classList.remove('active'));
+    document.querySelectorAll('.skin-btn').forEach(d => d.classList.remove('active'));
+    document.body.className = "";
+    
     if (name === 'christmas') {
-        document.body.classList.add('skin-christmas'); document.querySelector('.s-xmas').classList.add('active');
+        document.body.classList.add('skin-christmas'); 
+        document.querySelector('.s-xmas').classList.add('active');
         startSnow();
     } else {
-        document.querySelector('.s-def').classList.add('active'); stopSnow();
+        document.querySelector('.s-def').classList.add('active'); 
+        stopSnow();
         document.documentElement.style.setProperty('--c', robotBaseColor);
         document.documentElement.style.setProperty('--glow', robotBaseColor);
     }
-    drawFace(); // Redraw canvas with new color
+    drawFace();
 }
 
 function startSnow() {
@@ -290,5 +234,71 @@ function openMenu() { document.getElementById('menuModal').style.display = 'flex
 function closeMenu() { document.getElementById('menuModal').style.display = 'none'; }
 function openWorkshop() { document.getElementById('workshopModal').style.display = 'flex'; initCanvas(); }
 function closeWorkshop() { document.getElementById('workshopModal').style.display = 'none'; }
-function checkIdleStatus() { /* Optional mood revert logic */ }
-function addDynamicEye(data) { /* Optional dynamic layout logic */ }
+function checkIdleStatus() { /* Optional mood revert */ }
+function addDynamicEye(data) { /* Optional dynamic layout */ }
+
+// GAMES
+function startGame(id) { send(id); isGameRunning = true; closeMenu(); lastInputTime = Date.now(); }
+function stopGame() { send('X'); isGameRunning = false; closeMenu(); lastInputTime = Date.now(); }
+
+// EDITOR CANVAS
+function initCanvas() {
+    canvas = document.getElementById('face-canvas');
+    if(!canvas) return;
+    ctx = canvas.getContext('2d');
+    
+    const getPos = (e) => {
+        const r = canvas.getBoundingClientRect();
+        const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+        const y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
+        return { x: x * (256/r.width), y: y * (128/r.height) };
+    };
+    
+    const start = (e) => {
+        let p = getPos(e); let found = false;
+        eyes.forEach((eye, i) => {
+            if (p.x >= (eye.x*2)-eye.w && p.x <= (eye.x*2)+eye.w && p.y >= (eye.y*2)-eye.h && p.y <= (eye.y*2)+eye.h) {
+                draggingEye = eye; selectedEyeIndex = i; found = true;
+                document.getElementById('eye-controls').style.display = 'flex';
+                document.getElementById('edit-w').value = eye.w; document.getElementById('edit-h').value = eye.h; document.getElementById('edit-r').value = eye.r || 0;
+            }
+        });
+        if(!found) { selectedEyeIndex = -1; document.getElementById('eye-controls').style.display = 'none'; }
+        drawFace();
+    };
+    const move = (e) => {
+        if(!draggingEye) return; e.preventDefault();
+        let p = getPos(e); draggingEye.x = Math.floor(p.x / 2); draggingEye.y = Math.floor(p.y / 2);
+        drawFace();
+    };
+    canvas.addEventListener('mousedown', start); canvas.addEventListener('touchstart', start);
+    canvas.addEventListener('mousemove', move); canvas.addEventListener('touchmove', move);
+    window.addEventListener('mouseup', () => draggingEye=null); window.addEventListener('touchend', () => draggingEye=null);
+}
+
+function drawFace() {
+    ctx.fillStyle = "#000"; ctx.fillRect(0,0,256,128);
+    let col = document.body.classList.contains('skin-christmas') ? "#D42426" : robotBaseColor;
+    ctx.strokeStyle = "#333"; ctx.lineWidth = 2; ctx.strokeRect(0,0,256,128);
+    eyes.forEach((e, i) => {
+        ctx.fillStyle = (i === selectedEyeIndex) ? "#FFF" : col;
+        ctx.beginPath();
+        let x = e.x*2 - e.w, y = e.y*2 - e.h, w = e.w*2, h = e.h*2;
+        if(ctx.roundRect) ctx.roundRect(x, y, w, h, (e.r||0)*2); else ctx.rect(x,y,w,h);
+        ctx.fill();
+    });
+}
+window.addEye = function() { eyes.push({x: 64, y: 32, w: 24, h: 24, r: 5}); selectedEyeIndex = eyes.length-1; drawFace(); };
+window.clearCanvas = function() { eyes = []; selectedEyeIndex = -1; drawFace(); };
+window.updateEyeParam = function() { if(selectedEyeIndex === -1) return; eyes[selectedEyeIndex].w = parseInt(document.getElementById('edit-w').value); eyes[selectedEyeIndex].h = parseInt(document.getElementById('edit-h').value); eyes[selectedEyeIndex].r = parseInt(document.getElementById('edit-r').value); drawFace(); };
+window.uploadFace = function() { let str = `U:${eyes.length}`; eyes.forEach(e => { str += `;${e.x-64},${e.y-32},${e.w},${e.h},${e.r||0}`; }); send(str); renderLocalVisor(eyes); closeWorkshop(); };
+function renderLocalVisor(list) {
+    let v = document.getElementById('visor'); v.innerHTML = '';
+    list.forEach(e => {
+        let d = document.createElement('div'); d.className = 'eye';
+        d.style.width = (e.w * 2.2) + 'px'; d.style.height = (e.h * 2.2) + 'px';
+        d.style.left = `calc(50% + ${(e.x - 64)*2.2}px)`; d.style.top = `calc(50% + ${(e.y - 32)*2.2}px)`;
+        d.style.borderRadius = ((e.r||0)*2.2) + 'px';
+        v.appendChild(d);
+    });
+}
