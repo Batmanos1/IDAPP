@@ -1,0 +1,83 @@
+:root { --c: #00e5ff; --p: #ff0055; --g: #00ff88; --v: #aa00ff; --bg: #050505; --glow: #00e5ff; }
+
+/* CHRISTMAS THEME OVERRIDES */
+body.skin-christmas { 
+    --c: #FFD700; /* Gold Text */
+    --p: #D42426; /* Santa Red */
+    --g: #2F5A28; /* Pine Green */
+    --v: #FFFFFF; /* Snow White */
+    --glow: #D42426; /* Red Glow */
+    --bg: #0b0f19; /* Dark Winter Night Background */
+}
+
+body { background: var(--bg); color: var(--c); font-family: 'Courier New', monospace; text-align: center; margin: 0; overflow: hidden; touch-action: none; user-select: none; height: 100vh; width: 100vw; }
+
+/* SNOW ANIMATION STYLES */
+.snowflake { position: fixed; top: -10px; color: #FFF; font-size: 1em; user-select: none; z-index: 1; pointer-events: none; animation-name: snow; animation-timing-function: linear; animation-iteration-count: infinite; opacity: 0; }
+@keyframes snow { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(100vh); opacity: 0; } }
+
+/* Default Background (Aurora) - Hidden in Christmas Mode */
+#nebula-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 1; transition: opacity 0.5s; background: var(--bg); }
+body.skin-christmas #nebula-bg { opacity: 0.2; } 
+
+#app-container { height: 100%; display: flex; flex-direction: column; justify-content: space-between; position: relative; z-index: 2; padding: 20px; box-sizing: border-box; }
+
+h1 { margin: 10px 0; text-shadow: 0 0 10px var(--c); letter-spacing: 2px; font-size: 28px; transition: color 0.5s; }
+.subtitle { font-size: 12px; color: #666; letter-spacing: 1px; margin-top: -5px; }
+body.skin-christmas .subtitle { color: #888; } 
+
+/* CONNECT BUTTON */
+#connect-btn { 
+    position: absolute; top: 20px; right: 20px; 
+    background: transparent; border: 1px solid var(--c); color: var(--c); 
+    padding: 5px 10px; font-family: inherit; font-weight: bold; cursor: pointer; z-index: 10;
+    box-shadow: 0 0 5px var(--glow); transition: 0.3s;
+}
+body.skin-christmas #connect-btn { border-color: #D42426; color: #FFF; background: #D42426; box-shadow: 0 0 10px #D42426; }
+
+/* VISOR */
+.visor-container { position: relative; width: 220px; margin: 20px auto; }
+.visor { height: 80px; display: flex; align-items: center; justify-content: center; gap: 12px; background: rgba(10,10,10,0.6); border-radius: 40px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 0 20px rgba(0,0,0,0.3); backdrop-filter: blur(10px); transition: 0.3s; }
+body.skin-christmas .visor { border: 2px solid #2F5A28; background: rgba(47, 90, 40, 0.3); }
+
+/* MOOD COLORS */
+.mood-happy .eye, body.mood-happy { --c: #00ff88; --glow: #00ff88; }
+.mood-angry .eye, body.mood-angry { --c: #ff0055; --glow: #ff0055; }
+.mood-tired .eye, body.mood-tired { --c: #aa00ff; --glow: #aa00ff; }
+.mood-love .eye, body.mood-love { --c: #ff66cc; --glow: #ff66cc; }
+
+.eye { background: var(--c); border-radius: 50%; box-shadow: 0 0 15px var(--c); transition: all 0.5s ease; }
+.eye.small { width: 25px; height: 25px; } .eye.big { width: 35px; height: 35px; }
+
+/* CONTROLS */
+.controls { display: flex; justify-content: center; align-items: center; gap: 20px; margin-bottom: 20px; }
+.btn-round { width: 85px; height: 85px; border-radius: 50%; background: linear-gradient(145deg, #1a1a1a, #0a0a0a); border: 2px solid #333; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; -webkit-tap-highlight-color: transparent; box-shadow: inset 0 0 10px #000; transition: 0.1s; }
+.btn-round:active { transform: scale(0.95); background: #000; border-color: var(--c); }
+
+body.skin-christmas .btn-round { border-color: #2F5A28; background: linear-gradient(145deg, #182e14, #0f1f0d); }
+body.skin-christmas .btn-round:active { border-color: #D42426; }
+
+.btn-eye { border-radius: 50%; display: inline-block; background: var(--c); box-shadow: 0 0 5px var(--glow); }
+.btn-eye.b-s { width: 10px; height: 10px; } .btn-eye.b-b { width: 18px; height: 18px; }
+.menu-btn { width: 60px; height: 60px; font-size: 12px; border-color: var(--c); color: var(--c); font-weight: bold; }
+
+/* SKIN SELECTOR */
+.skin-selector { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
+.skin-dot { width: 15px; height: 15px; border-radius: 50%; cursor: pointer; border: 1px solid #555; opacity: 0.5; }
+.skin-dot.active { opacity: 1; border-color: #fff; transform: scale(1.2); }
+.s-def { background: #00e5ff; } .s-xmas { background: #D42426; }
+
+/* WEATHER INPUT */
+#weather-box { position: absolute; top: 60px; right: 20px; display: none; flex-direction: column; gap: 5px; align-items: flex-end; }
+.weather-btn { 
+    background: rgba(0,0,0,0.5); border: 1px solid var(--c); color: var(--c); 
+    padding: 8px 12px; font-size: 11px; cursor: pointer; font-family: inherit; 
+    border-radius: 4px; box-shadow: 0 0 5px var(--glow); text-transform: uppercase;
+}
+body.skin-christmas .weather-btn { border-color: #FFD700; color: #FFD700; }
+
+/* MENU & MODALS */
+#menuModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 100; backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; }
+.menu-box { background: #0a0a0a; border: 2px solid var(--c); box-shadow: 0 0 50px var(--glow); padding: 20px; width: 85%; max-width: 400px; text-align: left; }
+.menu-item { width: 100%; padding: 12px; border-bottom: 1px solid #333; color: #aaa; background: none; border: none; text-align: left; cursor: pointer; }
+.close-txt { margin-top: 20px; text-align: center; text-decoration: underline; color: #666; cursor: pointer; }
