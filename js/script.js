@@ -5,7 +5,6 @@ let currentHappiness = 50;
 const initialVitalStates = { hap: 50, hun: 80, eng: 10 };
 
 // --- DESIGNER STATE ---
-// Default to 4 eyes (Standard layout)
 let customEyes = [
     {id:0, w:25, h:25, r:50, x:-50, y:0},  // Left Outer
     {id:1, w:35, h:35, r:50, x:-20, y:0},  // Left Inner
@@ -264,18 +263,20 @@ function btnUp(e, cmd) {
 function startGame(id) { send(id); isGameRunning = true; closeMenu(); lastInputTime = Date.now(); }
 function stopGame() { send('X'); isGameRunning = false; closeMenu(); lastInputTime = Date.now(); }
 
+// MENU LOGIC (UPDATED FOR GLASS OVERLAY)
 function openMenu() { 
-    document.getElementById('menuModal').style.display = 'flex'; 
+    let m = document.getElementById('menuModal');
+    m.style.display = 'flex';
+    // Small delay to allow CSS opacity transition
+    setTimeout(() => m.classList.add('visible'), 10);
     send('Q'); 
-    let gameContent = document.getElementById('cat-games');
-    gameContent.style.maxHeight = gameContent.scrollHeight + "px";
 }
-function closeMenu() { document.getElementById('menuModal').style.display = 'none'; }
-function toggleCat(id) { 
-    const content = document.getElementById('cat-' + id);
-    if (content.style.maxHeight) { content.style.maxHeight = null; } 
-    else { document.querySelectorAll('.cat-content').forEach(c => c.style.maxHeight = null); content.style.maxHeight = content.scrollHeight + "px"; }
+function closeMenu() { 
+    let m = document.getElementById('menuModal');
+    m.classList.remove('visible');
+    setTimeout(() => m.style.display = 'none', 300);
 }
+
 function forceSleep() { send('Z'); closeMenu(); document.getElementById('visor').className = "visor mood-sleep"; document.body.className = "mood-sleep"; }
 
 // SWIPE LOGIC
@@ -283,7 +284,7 @@ let startY = 0;
 const container = document.getElementById('app-container');
 document.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: false});
 document.addEventListener('touchend', e => { if (Math.abs(startY - e.changedTouches[0].clientY) > 50) scrollToPage(startY > e.changedTouches[0].clientY ? 2 : 1); }, {passive: false});
-function scrollToPage(p) { container.style.transform = p === 2 ? "translateY(-100vh)" : "translateY(0)"; }
+function scrollToPage(p) { container.style.transform = p === 2 ? "translateY(-100dvh)" : "translateY(0)"; }
 
 // BLE
 const sUUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
@@ -366,7 +367,10 @@ function handleUpdate(event) {
     else if (type === 'T') { 
         let txtDiv = document.getElementById('game-text');
         txtDiv.innerText = data;
-        if(data.length > 0) txtDiv.classList.add('active'); else txtDiv.classList.remove('active');
+        // Animation trigger
+        txtDiv.style.opacity = '1';
+        setTimeout(() => txtDiv.style.opacity = '0.7', 200);
+        
         if (data === "GAME OVER" || data === "WINNER!" || data === "LOSE!") { setTimeout(() => { isGameRunning = false; }, 1000); }
     }
     else if (type === 'C') { document.getElementById('val-coins').innerText = data; }
