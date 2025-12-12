@@ -4,84 +4,180 @@ let lastInputTime = Date.now();
 let currentHappiness = 50; 
 const initialVitalStates = { hap: 50, hun: 80, eng: 10 };
 
-// --- NEW: SETTINGS STORAGE ---
-let eyeSettings = { w: 35, h: 35, r: 50 };
+// --- DESIGNER STATE ---
+// Default to 4 eyes (Standard layout)
+let customEyes = [
+    {id:0, w:25, h:25, r:50, x:-50, y:0},  // Left Outer
+    {id:1, w:35, h:35, r:50, x:-20, y:0},  // Left Inner
+    {id:2, w:35, h:35, r:50, x:20, y:0},   // Right Inner
+    {id:3, w:25, h:25, r:50, x:50, y:0}    // Right Outer
+];
+let selectedEyeIndex = -1;
 
 window.addEventListener('load', () => { 
     setInterval(checkIdleStatus, 1000); 
     updateBackgroundVitals(initialVitalStates);
-    loadSettings(); // Restore saved eyes
-    getWeather(); // Fetch real weather
+    loadDesign(); // Load saved custom eyes
+    getWeather(); 
 });
 
-// --- NEW: WEATHER LOGIC (Open-Meteo API) ---
+// --- WEATHER ---
 async function getWeather() {
     const wDiv = document.getElementById('weather-widget');
     if (!navigator.geolocation) { wDiv.innerText = "NO GPS"; return; }
-    
     navigator.geolocation.getCurrentPosition(async (pos) => {
         try {
-            const lat = pos.coords.latitude; const lon = pos.coords.longitude;
-            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&current_weather=true`);
             const data = await res.json();
             const code = data.current_weather.weathercode;
-            const temp = data.current_weather.temperature;
+            const temp = Math.round(data.current_weather.temperature);
             
-            // Map Weather to Nebula Colors (Feeling)
+            // Format for Display
             let desc = "CLEAR";
-            if (code > 50) { // Rain/Drizzle
-                desc = "RAIN"; 
-                document.documentElement.style.setProperty('--bg', '#050a10'); // Dark Blue Tint
-                document.documentElement.style.setProperty('--c', '#00aaff'); // Blue UI
-            } else if (code < 3) { // Sunny/Clear
-                desc = "SUN";
-                // Keep default neon or go brighter
+            if (code > 50) { 
+                desc = "RAIN";
+                document.documentElement.style.setProperty('--bg', '#050a10'); 
+                document.documentElement.style.setProperty('--c', '#00aaff'); 
             }
-            
             wDiv.innerText = `${desc} ${temp}°C`;
-        } catch (e) { wDiv.innerText = "OFFLINE WTHR"; }
-    }, () => { wDiv.innerText = "GPS DENIED"; });
+
+            // SEND TO ROBOT: Protocol W:temp,type (0=Sun, 1=Rain, 2=Cloudy)
+            let type = (code > 50) ? 1 : 0; 
+            if(charRX) send(`W:${temp},${type}`);
+
+        } catch (e) { wDiv.innerText = "OFFLINE"; }
+    });
 }
 
-// --- NEW: CUSTOMIZATION LOGIC ---
-function loadSettings() {
-    const saved = localStorage.getItem('idapp_eyes');
-    if (saved) {
-        eyeSettings = JSON.parse(saved);
-        applyEyes();
-    }
-    // Set slider values
-    document.getElementById('slider-w').value = eyeSettings.w;
-    document.getElementById('slider-h').value = eyeSettings.h;
-    document.getElementById('slider-r').value = eyeSettings.r;
+// --- DESIGNER LOGIC ---
+function openDesigner() {
+    document.getElementById('designerModal').style.display = 'flex';
+    renderDesignerUI();
 }
 
-function toggleEditMode() {
-    const m = document.getElementById('editModal');
-    if (m.style.display === 'flex') {
-        m.style.display = 'none';
-        // Save on close
-        localStorage.setItem('idapp_eyes', JSON.stringify(eyeSettings));
+function closeDesigner() {
+    document.getElementById('designerModal').style.display = 'none';
+    renderEyesToMainVisor(); // Apply changes to main app
+}
+
+function loadDesign() {
+    const saved = localStorage.getItem('idapp_design');
+    if (saved) { customEyes = JSON.parse(saved); }
+    renderEyesToMainVisor();
+}
+
+function renderEyesToMainVisor() {
+    const v = document.getElementById('visor');
+    v.innerHTML = '';
+    customEyes.forEach(eye => {
+        let el = document.createElement('div');
+        el.className = 'eye';
+        el.style.width = eye.w + 'px';
+        el.style.height = eye.h + 'px';
+        el.style.borderRadius = eye.r + '%';
+        // Center (0,0) is 50%, 50%. X maps to percentage offset.
+        el.style.left = `calc(50% + ${eye.x}px)`;
+        el.style.top = `calc(50% + ${eye.y}px)`;
+        v.appendChild(el);
+    });
+}
+
+function renderDesignerUI() {
+    // 1. Render Preview Visor
+    const pv = document.getElementById('preview-visor');
+    pv.innerHTML = '';
+    customEyes.forEach((eye, idx) => {
+        let el = document.createElement('div');
+        el.className = 'eye';
+        if (idx === selectedEyeIndex) el.style.border = "1px solid #fff"; // Highlight selected
+        el.style.width = eye.w + 'px';
+        el.style.height = eye.h + 'px';
+        el.style.borderRadius = eye.r + '%';
+        el.style.left = `calc(50% + ${eye.x}px)`;
+        el.style.top = `calc(50% + ${eye.y}px)`;
+        pv.appendChild(el);
+    });
+
+    // 2. Render Selection Buttons
+    const selRow = document.getElementById('eye-selector');
+    selRow.innerHTML = '';
+    customEyes.forEach((_, idx) => {
+        let btn = document.createElement('div');
+        btn.className = `eye-select-btn ${idx === selectedEyeIndex ? 'active' : ''}`;
+        btn.innerText = idx + 1;
+        btn.onclick = () => selectEye(idx);
+        selRow.appendChild(btn);
+    });
+
+    // 3. Update Sliders if eye selected
+    const controls = document.getElementById('controls-area');
+    if (selectedEyeIndex > -1) {
+        controls.classList.add('active');
+        let e = customEyes[selectedEyeIndex];
+        document.getElementById('inp-w').value = e.w; document.getElementById('val-w').innerText = e.w;
+        document.getElementById('inp-h').value = e.h; document.getElementById('val-h').innerText = e.h;
+        document.getElementById('inp-r').value = e.r; document.getElementById('val-r').innerText = e.r;
+        document.getElementById('inp-x').value = e.x; document.getElementById('val-x').innerText = e.x;
+        document.getElementById('inp-y').value = e.y; document.getElementById('val-y').innerText = e.y;
     } else {
-        m.style.display = 'flex';
+        controls.classList.remove('active');
     }
 }
 
-function updateEyePreview() {
-    eyeSettings.w = document.getElementById('slider-w').value;
-    eyeSettings.h = document.getElementById('slider-h').value;
-    eyeSettings.r = document.getElementById('slider-r').value;
-    applyEyes();
+function selectEye(idx) { selectedEyeIndex = idx; renderDesignerUI(); }
+
+function addEye() {
+    if (customEyes.length >= 6) return; // Limit to 6 eyes
+    customEyes.push({id: Date.now(), w:30, h:30, r:50, x:0, y:0});
+    selectEye(customEyes.length - 1);
 }
 
-function applyEyes() {
-    let r = document.documentElement;
-    r.style.setProperty('--eye-w', eyeSettings.w + 'px');
-    r.style.setProperty('--eye-h', eyeSettings.h + 'px');
-    r.style.setProperty('--eye-r', eyeSettings.r + '%');
+function deleteSelectedEye() {
+    if (selectedEyeIndex === -1) return;
+    customEyes.splice(selectedEyeIndex, 1);
+    selectedEyeIndex = -1;
+    renderDesignerUI();
 }
 
-// --- EXISTING LOGIC (UPDATED) ---
+function updateEyeParam(param, val) {
+    if (selectedEyeIndex === -1) return;
+    val = parseInt(val);
+    let eye = customEyes[selectedEyeIndex];
+    eye[param] = val;
+    document.getElementById(`val-${param}`).innerText = val;
+
+    // --- MIRROR LOGIC ---
+    if (document.getElementById('mirror-check').checked) {
+        let partner = customEyes.find((e, i) => i !== selectedEyeIndex && Math.abs(e.x + eye.x) < 10); 
+        if (partner) {
+            if (param === 'x') partner.x = -val; // Invert X
+            else if (param === 'y') partner.y = val; // Keep Y
+            else partner[param] = val; // Copy Size/Shape
+        }
+    }
+    renderDesignerUI();
+}
+
+function saveAndUpload() {
+    // 1. Save to Local Storage
+    localStorage.setItem('idapp_design', JSON.stringify(customEyes));
+    
+    // 2. Format Data for Robot (MATCHING C++ CODE)
+    // Robot expects: "U:count;x,y,w,h,r;x,y,w,h,r..."
+    let dataStr = "U:" + customEyes.length;
+    
+    customEyes.forEach(e => {
+        // Robot Code parses: X, then Y, then W, then H, then R
+        dataStr += `;${e.x},${e.y},${e.w},${e.h},${e.r}`;
+    });
+    
+    // 3. Send
+    send(dataStr);
+    closeDesigner();
+}
+
+
+// --- EXISTING APP LOGIC ---
 function checkIdleStatus() {
     if (document.getElementById('status').innerText === "ONLINE" && (Date.now() - lastInputTime > 5000)) {
         updateVisorMood(currentHappiness);
@@ -90,20 +186,12 @@ function checkIdleStatus() {
 
 function updateVisorMood(happiness) {
     let v = document.getElementById('visor');
-    let b = document.body;
-    v.className = "visor"; b.className = "";
-    if (happiness > 60) { v.classList.add('mood-happy'); b.classList.add('mood-happy'); } 
-    else if (happiness < 30) { v.classList.add('mood-angry'); b.classList.add('mood-angry'); }
+    v.className = "visor"; document.body.className = "";
+    if (happiness > 60) { v.classList.add('mood-happy'); document.body.classList.add('mood-happy'); } 
+    else if (happiness < 30) { v.classList.add('mood-angry'); document.body.classList.add('mood-angry'); }
 }
 
 function updateBackgroundVitals(vitals) {
-    let nebula = document.getElementById('nebula-bg');
-    let hapSize = vitals.hap;
-    let hunSize = vitals.hun;
-    let engSize = 100 - vitals.eng;
-
-    // Kept the gradient logic but simplified slightly
-    // Note: The CSS animation handles the "feeling" pulse now.
     document.getElementById('bar-hap').style.width = vitals.hap + '%';
     document.getElementById('bar-eng').style.width = (100 - vitals.eng) + '%';
     document.getElementById('val-eng').innerText = (100 - vitals.eng) + '%';
@@ -114,9 +202,7 @@ function btnDown(e, cmd) {
     lastInputTime = Date.now(); 
     let state = btnState[cmd];
     if (state.repeat) return; 
-
     document.getElementById('btn-' + cmd).classList.add('pressing');
-
     if (isGameRunning) { send(cmd); return; }
     
     state.tapCount++;
@@ -136,7 +222,7 @@ function btnDown(e, cmd) {
 function btnUp(e, cmd) {
     e.preventDefault();
     lastInputTime = Date.now();
-    if (btnState[cmd].tapTimer) { clearTimeout(btnState[cmd].tapTimer); }
+    if (btnState[cmd].tapTimer) clearTimeout(btnState[cmd].tapTimer); 
     if (btnState[cmd].repeat) { clearInterval(btnState[cmd].repeat); btnState[cmd].repeat = null; }
     document.getElementById('btn-' + cmd).classList.remove('pressing');
 }
@@ -151,25 +237,21 @@ function openMenu() {
     gameContent.style.maxHeight = gameContent.scrollHeight + "px";
 }
 function closeMenu() { document.getElementById('menuModal').style.display = 'none'; }
-
 function toggleCat(id) { 
     const content = document.getElementById('cat-' + id);
     if (content.style.maxHeight) { content.style.maxHeight = null; } 
-    else { 
-        let allContent = document.querySelectorAll('.cat-content');
-        allContent.forEach(c => c.style.maxHeight = null);
-        content.style.maxHeight = content.scrollHeight + "px"; 
-    }
+    else { document.querySelectorAll('.cat-content').forEach(c => c.style.maxHeight = null); content.style.maxHeight = content.scrollHeight + "px"; }
 }
 function forceSleep() { send('Z'); closeMenu(); document.getElementById('visor').className = "visor mood-sleep"; document.body.className = "mood-sleep"; }
 
+// SWIPE LOGIC
 let startY = 0;
 const container = document.getElementById('app-container');
 document.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: false});
 document.addEventListener('touchend', e => { if (Math.abs(startY - e.changedTouches[0].clientY) > 50) scrollToPage(startY > e.changedTouches[0].clientY ? 2 : 1); }, {passive: false});
 function scrollToPage(p) { container.style.transform = p === 2 ? "translateY(-100vh)" : "translateY(0)"; }
 
-// --- BLUETOOTH MOCK / REAL ---
+// BLE
 const sUUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
 const cRX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
 const cTX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
@@ -177,7 +259,7 @@ let dev, serv, charRX;
 
 async function connectBLE() {
     try {
-        dev = await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: 'IDA' }], optionalServices: [sUUID] });
+        dev = await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: 'IDA' }, { namePrefix: 'IDC' }], optionalServices: [sUUID] });
         dev.addEventListener('gattserverdisconnected', onDisc);
         serv = await dev.gatt.connect();
         let svc = await serv.getPrimaryService(sUUID);
@@ -186,7 +268,6 @@ async function connectBLE() {
         await charTX.startNotifications();
         charTX.addEventListener('characteristicvaluechanged', handleUpdate);
         document.getElementById('status').innerText = "ONLINE";
-        document.getElementById('status').classList.add('on');
         document.getElementById('connectOverlay').style.display = 'none';
         document.getElementById('coin-box').style.display = 'block';
         document.getElementById('visor').classList.remove('mood-off');
@@ -196,8 +277,7 @@ async function connectBLE() {
 
 function onDisc() {
     document.getElementById('status').innerText = "OFFLINE";
-    document.getElementById('status').classList.remove('on');
-    document.getElementById('connectOverlay').style.display = 'block';
+    document.getElementById('connectOverlay').style.display = 'flex';
     document.getElementById('coin-box').style.display = 'none';
     document.getElementById('visor').className = "visor mood-off";
     document.body.className = ""; 
@@ -217,8 +297,8 @@ function handleUpdate(event) {
 
     if (type === 'I') { 
         let idParts = data.split('|');
-        document.getElementById('app-title').innerText = idParts[1].toUpperCase(); 
-        document.getElementById('app-type').innerText = "TYPE: " + idParts[0].toUpperCase(); 
+        if(idParts[1]) document.getElementById('app-title').innerText = idParts[1].toUpperCase(); 
+        if(idParts[0]) document.getElementById('app-type').innerText = "TYPE: " + idParts[0].toUpperCase(); 
         if(idParts[2]) document.getElementById('val-coins').innerText = idParts[2]; 
     }
     else if (type === 'H') { 
@@ -239,7 +319,6 @@ function handleUpdate(event) {
         currentHappiness = parseInt(data);
         initialVitalStates.hap = currentHappiness;
         document.getElementById('bar-hap').style.width = currentHappiness + "%"; 
-        document.getElementById('val-hap').innerText = currentHappiness + "%"; 
         updateBackgroundVitals(initialVitalStates);
     }
     else if (type === 'M') { 
@@ -247,15 +326,10 @@ function handleUpdate(event) {
         let v = document.getElementById('visor');
         let b = document.body;
         v.className = "visor"; b.className = ""; 
-        
-        // --- UPDATED MOOD HANDLING ---
         if (num === 1) { v.classList.add('mood-happy'); b.classList.add('mood-happy'); }
         if (num === 2) { v.classList.add('mood-angry'); b.classList.add('mood-angry'); }
         if (num === 3) { v.classList.add('mood-tired'); b.classList.add('mood-tired'); }
-        
-        // --- RESTORED MAD ANIMATION ---
-        if (num === 4) { v.classList.add('mood-mad'); b.classList.add('mood-mad'); }
-
+        if (num === 4) { v.classList.add('mood-mad'); b.classList.add('mood-mad'); } // Mad Animation
         if (num === 0) v.classList.remove('mood-sleep'); 
         lastInputTime = Date.now(); 
     }
