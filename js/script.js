@@ -7,11 +7,9 @@ const initialVitalStates = { hap: 50, hun: 80, eng: 10 };
 // --- VISUAL SCALING FACTOR ---
 // Robot Screen is 128px wide. App Visor is 240px wide.
 // 240 / 128 ≈ 1.8
-// We use this to make small robot values look big on the phone screen.
 const S = 1.8; 
 
 // --- DESIGNER STATE ---
-// Default "Incy" Layout (Optimized for 128x64 Robot Screen)
 let customEyes = [
     {id:0, w:15, h:15, r:50, x:-36, y:0},  // Left Outer
     {id:1, w:25, h:25, r:50, x:-16, y:0},  // Left Inner
@@ -64,7 +62,6 @@ function closeDesigner() {
     renderEyesToMainVisor();
 }
 
-// RENAME FUNCTION
 function renameRobot() {
     let name = document.getElementById('robot-name-input').value;
     if(name && name.length > 0) {
@@ -74,7 +71,7 @@ function renameRobot() {
     }
 }
 
-// --- PRESETS (ALL SCALED DOWN FOR ROBOT) ---
+// --- PRESETS ---
 function loadPreset(name) {
     if(name === 'incy') {
         customEyes = [
@@ -86,21 +83,21 @@ function loadPreset(name) {
     }
     else if(name === 'glitch') {
         customEyes = [
-            {id:0, w:14, h:28, r:0, x:-25, y:-8}, // Reduced from 20x40
-            {id:1, w:28, h:14, r:0, x:25, y:8},   // Reduced from 40x20
-            {id:2, w:7, h:7, r:50, x:0, y:0}      // Reduced from 10x10
+            {id:0, w:14, h:28, r:0, x:-25, y:-8}, 
+            {id:1, w:28, h:14, r:0, x:25, y:8},   
+            {id:2, w:7, h:7, r:50, x:0, y:0}      
         ];
     }
     else if(name === 'weaver') {
         customEyes = [
-            {id:0, w:10, h:10, r:50, x:-28, y:-14}, {id:1, w:10, h:10, r:50, x:28, y:-14}, // Top Pair
-            {id:2, w:18, h:18, r:50, x:-14, y:-7},  {id:3, w:18, h:18, r:50, x:14, y:-7},  // Mid Pair
-            {id:4, w:7, h:7, r:50, x:-21, y:14},    {id:5, w:7, h:7, r:50, x:21, y:14}     // Bot Pair
+            {id:0, w:10, h:10, r:50, x:-28, y:-14}, {id:1, w:10, h:10, r:50, x:28, y:-14}, 
+            {id:2, w:18, h:18, r:50, x:-14, y:-7},  {id:3, w:18, h:18, r:50, x:14, y:-7},  
+            {id:4, w:7, h:7, r:50, x:-21, y:14},    {id:5, w:7, h:7, r:50, x:21, y:14}     
         ];
     }
     else if(name === 'cyclops') {
         customEyes = [
-            {id:0, w:40, h:40, r:50, x:0, y:0} // Reduced from 55x55
+            {id:0, w:40, h:40, r:50, x:0, y:0} 
         ];
     }
     selectedEyeIndex = -1; 
@@ -116,11 +113,13 @@ function renderEyesToMainVisor() {
     customEyes.forEach(eye => {
         let el = document.createElement('div');
         el.className = 'eye';
-        // APPLY VISUAL SCALING (Multiplier S)
         el.style.width = (eye.w * S) + 'px';
         el.style.height = (eye.h * S) + 'px';
-        el.style.borderRadius = eye.r + '%';
-        // Scale Position from Center
+        
+        // [FIX] Convert Radius to Pixels and Scale it
+        // This ensures the corner roundness matches the robot's pixel grid
+        el.style.borderRadius = (eye.r * S) + 'px';
+        
         el.style.left = `calc(50% + ${eye.x * S}px)`;
         el.style.top = `calc(50% + ${eye.y * S}px)`;
         v.appendChild(el);
@@ -135,10 +134,12 @@ function renderDesignerUI() {
         el.className = 'eye';
         if (idx === selectedEyeIndex) el.style.border = "1px solid #fff"; 
         
-        // APPLY VISUAL SCALING HERE TOO
         el.style.width = (eye.w * S) + 'px';
         el.style.height = (eye.h * S) + 'px';
-        el.style.borderRadius = eye.r + '%';
+        
+        // [FIX] Convert Radius to Pixels and Scale it
+        el.style.borderRadius = (eye.r * S) + 'px';
+        
         el.style.left = `calc(50% + ${eye.x * S}px)`;
         el.style.top = `calc(50% + ${eye.y * S}px)`;
         
@@ -159,7 +160,6 @@ function renderDesignerUI() {
     if (selectedEyeIndex > -1) {
         controls.classList.add('active');
         let e = customEyes[selectedEyeIndex];
-        // Sliders still control the RAW (Small) values for the robot
         document.getElementById('inp-w').value = e.w; document.getElementById('val-w').innerText = e.w;
         document.getElementById('inp-h').value = e.h; document.getElementById('val-h').innerText = e.h;
         document.getElementById('inp-r').value = e.r; document.getElementById('val-r').innerText = e.r;
@@ -174,7 +174,6 @@ function selectEye(idx) { selectedEyeIndex = idx; renderDesignerUI(); }
 
 function addEye() {
     if (customEyes.length >= 8) return; 
-    // New Eye Default: 20px (Small for Robot, will look like ~36px in App)
     customEyes.push({id: Date.now(), w:20, h:20, r:50, x:0, y:0});
     selectEye(customEyes.length - 1);
 }
@@ -206,7 +205,6 @@ function updateEyeParam(param, val) {
 
 function saveAndUpload() {
     localStorage.setItem('idapp_design', JSON.stringify(customEyes));
-    // Send raw (small) values to Robot
     let dataStr = "U:" + customEyes.length;
     customEyes.forEach(e => {
         dataStr += `;${e.x},${e.y},${e.w},${e.h},${e.r}`;
@@ -314,7 +312,6 @@ async function connectBLE() {
         await charTX.startNotifications();
         charTX.addEventListener('characteristicvaluechanged', handleUpdate);
         
-        // SUCCESS: "Boot Up" the UI
         document.body.classList.remove('offline'); 
         document.getElementById('status').innerText = "ONLINE";
         document.getElementById('status').style.pointerEvents = "none";
@@ -330,9 +327,7 @@ async function connectBLE() {
 }
 
 function onDisc() {
-    // DISCONNECT: Kill the UI
     document.body.classList.add('offline'); 
-    
     let s = document.getElementById('status');
     s.innerText = "OFFLINE - TAP TO CONNECT";
     s.style.pointerEvents = "all";
@@ -370,13 +365,18 @@ function handleUpdate(event) {
     }
     else if (type === 'L') {
         let parts = data.split(',');
+        
+        let rVal = 50; 
+        if (parts.length > 4) rVal = parseInt(parts[4]);
+        if (isNaN(rVal)) rVal = 50;
+
         let newEye = {
             id: Date.now() + Math.random(),
-            x: parseInt(parts[0]),
-            y: parseInt(parts[1]),
-            w: parseInt(parts[2]),
-            h: parseInt(parts[3]),
-            r: parseInt(parts[4])
+            x: parseInt(parts[0]) || 0,
+            y: parseInt(parts[1]) || 0,
+            w: parseInt(parts[2]) || 20,
+            h: parseInt(parts[3]) || 20,
+            r: rVal
         };
         customEyes.push(newEye);
         renderEyesToMainVisor();
