@@ -25,17 +25,18 @@
             <div class="header-area">
                 <h1 id="app-title">IDAPP</h1>
                 <div class="subtitle" id="app-type">UNIVERSAL CONTROLLER</div>
-                <div id="status" style="font-size:10px; color:#444;">DISCONNECTED</div>
+                <div id="status" onclick="connectBLE()">TAP TO CONNECT</div>
                 <div id="coin-box" style="display:none; color: gold; margin-top:5px;">COINS: <span id="val-coins">0</span></div>
             </div>
 
             <div class="visor-container">
+                <!-- Visor is empty until JS populates it on connect -->
                 <div class="visor mood-off" id="visor"></div>
                 <div id="game-text" style="height:20px; margin-top:10px; font-size:12px; color:#fff;"></div>
             </div>
 
-            <!-- REVAMPED BUTTONS: NO EYES, JUST CLEAN ICONS -->
             <div class="controls">
+                <!-- CLEAN BUTTONS: No inner eyes, just text/icons -->
                 <div class="btn-round" id="btn-L" onpointerdown="btnDown(event, 'L')" onpointerup="btnUp(event, 'L')" onpointerleave="btnUp(event, 'L')" oncontextmenu="return false;">
                     <div class="btn-label">[ + ]</div>
                 </div>
@@ -77,7 +78,6 @@
         </div>
     </div>
 
-    <!-- COMPACT DESIGNER MODAL -->
     <div id="designerModal">
         <div class="designer-panel">
             <div class="designer-header">
@@ -106,7 +106,6 @@
 
                 <div class="selection-row" id="eye-selector"></div>
 
-                <!-- 2 COLUMN GRID CONTROLS -->
                 <div class="sliders-area" id="controls-area">
                     <div class="slider-group">
                         <label>WIDTH <span id="val-w">30</span></label>
@@ -138,7 +137,6 @@
         </div>
     </div>
 
-    <!-- FULL SCREEN GLASS MENU -->
     <div id="menuModal">
         <div class="menu-content">
             <div class="menu-title">COMMAND PROTOCOLS</div>
