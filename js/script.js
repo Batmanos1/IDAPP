@@ -5,28 +5,29 @@ let currentHappiness = 50;
 const initialVitalStates = { hap: 50, hun: 80, eng: 10 };
 
 // --- VISUAL SCALING FACTOR ---
-// Robot Screen is 128px wide. App Visor is 240px wide.
-// 240 / 128 ≈ 1.8
 const S = 1.8; 
 
 // --- DESIGNER STATE ---
+// [UPDATED] Default Start: FluxGarage Style (2 Large Eyes)
 let customEyes = [
-    {id:0, w:15, h:15, r:50, x:-36, y:0},  // Left Outer
-    {id:1, w:25, h:25, r:50, x:-16, y:0},  // Left Inner
-    {id:2, w:25, h:25, r:50, x:16, y:0},   // Right Inner
-    {id:3, w:15, h:15, r:50, x:36, y:0}    // Right Outer
+    {id:0, w:36, h:48, r:10, x:-32, y:0},  // Left Eye (FluxGarage Standard)
+    {id:1, w:36, h:48, r:10, x:32, y:0}    // Right Eye
 ];
 let selectedEyeIndex = -1;
+let userHasEdited = false;
 
 window.addEventListener('load', () => { 
     setInterval(checkIdleStatus, 1000); 
     updateBackgroundVitals(initialVitalStates);
     
     const saved = localStorage.getItem('idapp_design');
-    if (saved) { customEyes = JSON.parse(saved); }
+    if (saved) { 
+        customEyes = JSON.parse(saved); 
+        userHasEdited = true; 
+    }
     
     getWeather(); 
-    onDisc(); // DEFAULT: Trigger OFFLINE state on load
+    onDisc(); 
 });
 
 // --- WEATHER ---
@@ -73,12 +74,12 @@ function renameRobot() {
 
 // --- PRESETS ---
 function loadPreset(name) {
+    userHasEdited = true; 
     if(name === 'incy') {
+        // [UPDATED] Now the "FluxGarage" Standard (2 Eyes)
         customEyes = [
-            {id:0, w:15, h:15, r:50, x:-36, y:0}, 
-            {id:1, w:25, h:25, r:50, x:-16, y:0},
-            {id:2, w:25, h:25, r:50, x:16, y:0},   
-            {id:3, w:15, h:15, r:50, x:36, y:0}
+            {id:0, w:36, h:48, r:10, x:-32, y:0}, 
+            {id:1, w:36, h:48, r:10, x:32, y:0}
         ];
     }
     else if(name === 'glitch') {
@@ -89,10 +90,12 @@ function loadPreset(name) {
         ];
     }
     else if(name === 'weaver') {
+        // [UPDATED] Now the "4 Basic Eyes" (Old Incy Layout)
         customEyes = [
-            {id:0, w:10, h:10, r:50, x:-28, y:-14}, {id:1, w:10, h:10, r:50, x:28, y:-14}, 
-            {id:2, w:18, h:18, r:50, x:-14, y:-7},  {id:3, w:18, h:18, r:50, x:14, y:-7},  
-            {id:4, w:7, h:7, r:50, x:-21, y:14},    {id:5, w:7, h:7, r:50, x:21, y:14}     
+            {id:0, w:15, h:15, r:50, x:-36, y:0}, 
+            {id:1, w:25, h:25, r:50, x:-16, y:0},
+            {id:2, w:25, h:25, r:50, x:16, y:0},   
+            {id:3, w:15, h:15, r:50, x:36, y:0}
         ];
     }
     else if(name === 'cyclops') {
@@ -115,11 +118,7 @@ function renderEyesToMainVisor() {
         el.className = 'eye';
         el.style.width = (eye.w * S) + 'px';
         el.style.height = (eye.h * S) + 'px';
-        
-        // [FIX] Convert Radius to Pixels and Scale it
-        // This ensures the corner roundness matches the robot's pixel grid
         el.style.borderRadius = (eye.r * S) + 'px';
-        
         el.style.left = `calc(50% + ${eye.x * S}px)`;
         el.style.top = `calc(50% + ${eye.y * S}px)`;
         v.appendChild(el);
@@ -136,10 +135,7 @@ function renderDesignerUI() {
         
         el.style.width = (eye.w * S) + 'px';
         el.style.height = (eye.h * S) + 'px';
-        
-        // [FIX] Convert Radius to Pixels and Scale it
         el.style.borderRadius = (eye.r * S) + 'px';
-        
         el.style.left = `calc(50% + ${eye.x * S}px)`;
         el.style.top = `calc(50% + ${eye.y * S}px)`;
         
@@ -173,12 +169,14 @@ function renderDesignerUI() {
 function selectEye(idx) { selectedEyeIndex = idx; renderDesignerUI(); }
 
 function addEye() {
+    userHasEdited = true; 
     if (customEyes.length >= 8) return; 
     customEyes.push({id: Date.now(), w:20, h:20, r:50, x:0, y:0});
     selectEye(customEyes.length - 1);
 }
 
 function deleteSelectedEye() {
+    userHasEdited = true; 
     if (selectedEyeIndex === -1) return;
     customEyes.splice(selectedEyeIndex, 1);
     selectedEyeIndex = -1;
@@ -186,6 +184,7 @@ function deleteSelectedEye() {
 }
 
 function updateEyeParam(param, val) {
+    userHasEdited = true; 
     if (selectedEyeIndex === -1) return;
     val = parseInt(val);
     let eye = customEyes[selectedEyeIndex];
@@ -204,6 +203,7 @@ function updateEyeParam(param, val) {
 }
 
 function saveAndUpload() {
+    userHasEdited = true;
     localStorage.setItem('idapp_design', JSON.stringify(customEyes));
     let dataStr = "U:" + customEyes.length;
     customEyes.forEach(e => {
@@ -322,6 +322,13 @@ async function connectBLE() {
         
         renderEyesToMainVisor();
         getWeather(); 
+        
+        if (userHasEdited) {
+            setTimeout(() => {
+                if(customEyes.length > 0) saveAndUpload();
+            }, 1500);
+        }
+
         lastInputTime = Date.now(); 
     } catch (e) { console.log(e); }
 }
@@ -360,27 +367,27 @@ function handleUpdate(event) {
         if(idParts[0]) document.getElementById('app-type').innerText = "TYPE: " + idParts[0].toUpperCase(); 
         if(idParts[2]) document.getElementById('val-coins').innerText = idParts[2]; 
         
-        customEyes = [];
         renderEyesToMainVisor();
     }
     else if (type === 'L') {
-        let parts = data.split(',');
-        
-        let rVal = 50; 
-        if (parts.length > 4) rVal = parseInt(parts[4]);
-        if (isNaN(rVal)) rVal = 50;
+        if (!userHasEdited) {
+            let parts = data.split(',');
+            
+            let rVal = 50; 
+            if (parts.length > 4) rVal = parseInt(parts[4]);
+            if (isNaN(rVal)) rVal = 50;
 
-        let newEye = {
-            id: Date.now() + Math.random(),
-            x: parseInt(parts[0]) || 0,
-            y: parseInt(parts[1]) || 0,
-            w: parseInt(parts[2]) || 20,
-            h: parseInt(parts[3]) || 20,
-            r: rVal
-        };
-        customEyes.push(newEye);
-        renderEyesToMainVisor();
-        localStorage.setItem('idapp_design', JSON.stringify(customEyes));
+            let newEye = {
+                id: Date.now() + Math.random(),
+                x: parseInt(parts[0]) || 0,
+                y: parseInt(parts[1]) || 0,
+                w: parseInt(parts[2]) || 20,
+                h: parseInt(parts[3]) || 20,
+                r: rVal
+            };
+            customEyes.push(newEye);
+            renderEyesToMainVisor();
+        }
     }
     else if (type === 'H') { 
         let scores = data.split(',');
