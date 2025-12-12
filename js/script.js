@@ -66,6 +66,40 @@ function loadDesign() {
     renderEyesToMainVisor();
 }
 
+function loadPreset(name) {
+    if(name === 'incy') {
+        customEyes = [
+            {id:0, w:25, h:25, r:50, x:-50, y:0}, 
+            {id:1, w:35, h:35, r:50, x:-20, y:0},
+            {id:2, w:35, h:35, r:50, x:20, y:0},   
+            {id:3, w:25, h:25, r:50, x:50, y:0}
+        ];
+    }
+    else if(name === 'glitch') {
+        customEyes = [
+            {id:0, w:20, h:40, r:0, x:-35, y:-10},
+            {id:1, w:40, h:20, r:0, x:35, y:10},
+            {id:2, w:10, h:10, r:50, x:0, y:0}
+        ];
+    }
+    else if(name === 'weaver') {
+        customEyes = [
+            {id:0, w:15, h:15, r:50, x:-40, y:-20}, {id:1, w:15, h:15, r:50, x:40, y:-20},
+            {id:2, w:25, h:25, r:50, x:-20, y:-10}, {id:3, w:25, h:25, r:50, x:20, y:-10},
+            {id:4, w:10, h:10, r:50, x:-30, y:20},  {id:5, w:10, h:10, r:50, x:30, y:20}
+        ];
+    }
+    else if(name === 'cyclops') {
+        customEyes = [
+            {id:0, w:55, h:55, r:50, x:0, y:0}
+        ];
+    }
+    
+    selectedEyeIndex = -1; // Deselect
+    renderDesignerUI(); // Update Preview
+    renderEyesToMainVisor(); // Update Main Visor
+}
+
 function renderEyesToMainVisor() {
     const v = document.getElementById('visor');
     v.innerHTML = '';
@@ -127,7 +161,7 @@ function renderDesignerUI() {
 function selectEye(idx) { selectedEyeIndex = idx; renderDesignerUI(); }
 
 function addEye() {
-    if (customEyes.length >= 6) return; // Limit to 6 eyes
+    if (customEyes.length >= 8) return; // Increased limit to 8
     customEyes.push({id: Date.now(), w:30, h:30, r:50, x:0, y:0});
     selectEye(customEyes.length - 1);
 }
@@ -300,6 +334,27 @@ function handleUpdate(event) {
         if(idParts[1]) document.getElementById('app-title').innerText = idParts[1].toUpperCase(); 
         if(idParts[0]) document.getElementById('app-type').innerText = "TYPE: " + idParts[0].toUpperCase(); 
         if(idParts[2]) document.getElementById('val-coins').innerText = idParts[2]; 
+        
+        // NEW: Clear current eyes so we can receive the robot's actual layout
+        customEyes = [];
+        renderEyesToMainVisor();
+    }
+    // NEW: RECEIVE LAYOUT DATA FROM ROBOT
+    else if (type === 'L') {
+        // Format: x,y,w,h,r
+        let parts = data.split(',');
+        let newEye = {
+            id: Date.now() + Math.random(), // Unique ID
+            x: parseInt(parts[0]),
+            y: parseInt(parts[1]),
+            w: parseInt(parts[2]),
+            h: parseInt(parts[3]),
+            r: parseInt(parts[4]) // Now receiving Radius
+        };
+        customEyes.push(newEye);
+        renderEyesToMainVisor();
+        // Also save this sync to local storage so it persists if we reload
+        localStorage.setItem('idapp_design', JSON.stringify(customEyes));
     }
     else if (type === 'H') { 
         let scores = data.split(',');
