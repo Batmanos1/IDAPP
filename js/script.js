@@ -17,12 +17,11 @@ window.addEventListener('load', () => {
     setInterval(checkIdleStatus, 1000); 
     updateBackgroundVitals(initialVitalStates);
     
-    // Load data but don't render to main visor yet (it stays empty until connect)
     const saved = localStorage.getItem('idapp_design');
     if (saved) { customEyes = JSON.parse(saved); }
     
-    getWeather(); // Fetch for UI display
-    onDisc(); // Force offline state on load
+    getWeather(); 
+    onDisc(); // DEFAULT: Trigger OFFLINE state on load
 });
 
 // --- WEATHER ---
@@ -38,16 +37,11 @@ async function getWeather() {
             
             let desc = "CLEAR";
             let type = 0;
-            
-            // Simple Weather Code Mapping
             if (code > 50 && code < 70) { desc = "RAIN"; type = 1; }
-            else if (code >= 70) { desc = "SNOW"; type = 1; } // Treat as cold
+            else if (code >= 70) { desc = "SNOW"; type = 1; }
             
             wDiv.innerText = `${desc} ${temp}°C`;
-
-            // SEND TO ROBOT if connected
             if(charRX) send(`W:${temp},${type}`);
-
         } catch (e) { wDiv.innerText = "OFFLINE"; }
     });
 }
@@ -55,12 +49,12 @@ async function getWeather() {
 // --- DESIGNER LOGIC ---
 function openDesigner() {
     document.getElementById('designerModal').style.display = 'flex';
-    renderDesignerUI(); // This renders the PREVIEW visor (always visible)
+    renderDesignerUI();
 }
 
 function closeDesigner() {
     document.getElementById('designerModal').style.display = 'none';
-    renderEyesToMainVisor(); // Attempt to update main visor
+    renderEyesToMainVisor();
 }
 
 function loadPreset(name) {
@@ -96,13 +90,11 @@ function loadPreset(name) {
     renderEyesToMainVisor(); 
 }
 
-// [UPDATED] Only renders if connected
 function renderEyesToMainVisor() {
     const v = document.getElementById('visor');
     v.innerHTML = '';
-    
-    // SECURITY CHECK: If offline, keep the visor empty (Black Screen)
-    if(document.getElementById('status').innerText !== "ONLINE") return;
+    // Double Check: Do not render if offline
+    if(document.body.classList.contains('offline')) return;
 
     customEyes.forEach(eye => {
         let el = document.createElement('div');
@@ -117,7 +109,6 @@ function renderEyesToMainVisor() {
 }
 
 function renderDesignerUI() {
-    // 1. Preview Visor (Always renders)
     const pv = document.getElementById('preview-visor');
     pv.innerHTML = '';
     customEyes.forEach((eye, idx) => {
@@ -132,7 +123,6 @@ function renderDesignerUI() {
         pv.appendChild(el);
     });
 
-    // 2. Select Buttons
     const selRow = document.getElementById('eye-selector');
     selRow.innerHTML = '';
     customEyes.forEach((_, idx) => {
@@ -143,7 +133,6 @@ function renderDesignerUI() {
         selRow.appendChild(btn);
     });
 
-    // 3. Sliders
     const controls = document.getElementById('controls-area');
     if (selectedEyeIndex > -1) {
         controls.classList.add('active');
@@ -203,12 +192,13 @@ function saveAndUpload() {
 
 // --- LOGIC ---
 function checkIdleStatus() {
-    if (document.getElementById('status').innerText === "ONLINE" && (Date.now() - lastInputTime > 5000)) {
+    if (!document.body.classList.contains('offline') && (Date.now() - lastInputTime > 5000)) {
         updateVisorMood(currentHappiness);
     }
 }
 
 function updateVisorMood(happiness) {
+    if(document.body.classList.contains('offline')) return;
     let v = document.getElementById('visor');
     v.className = "visor"; document.body.className = "";
     if (happiness > 60) { v.classList.add('mood-happy'); document.body.classList.add('mood-happy'); } 
@@ -222,6 +212,7 @@ function updateBackgroundVitals(vitals) {
 }
 
 function btnDown(e, cmd) {
+    if(document.body.classList.contains('offline')) return; // Disable when offline
     e.preventDefault(); 
     lastInputTime = Date.now(); 
     let state = btnState[cmd];
@@ -244,6 +235,7 @@ function btnDown(e, cmd) {
 }
 
 function btnUp(e, cmd) {
+    if(document.body.classList.contains('offline')) return;
     e.preventDefault();
     lastInputTime = Date.now();
     if (btnState[cmd].tapTimer) clearTimeout(btnState[cmd].tapTimer); 
@@ -255,6 +247,7 @@ function startGame(id) { send(id); isGameRunning = true; closeMenu(); lastInputT
 function stopGame() { send('X'); isGameRunning = false; closeMenu(); lastInputTime = Date.now(); }
 
 function openMenu() { 
+    if(document.body.classList.contains('offline')) return; // Disable menu when offline
     let m = document.getElementById('menuModal');
     m.style.display = 'flex';
     setTimeout(() => m.classList.add('visible'), 10);
@@ -272,7 +265,11 @@ function forceSleep() { send('Z'); closeMenu(); document.getElementById('visor')
 let startY = 0;
 const container = document.getElementById('app-container');
 document.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: false});
-document.addEventListener('touchend', e => { if (Math.abs(startY - e.changedTouches[0].clientY) > 50) scrollToPage(startY > e.changedTouches[0].clientY ? 2 : 1); }, {passive: false});
+document.addEventListener('touchend', e => { 
+    if(document.body.classList.contains('offline')) return; // Disable swipe when offline
+    if (Math.abs(startY - e.changedTouches[0].clientY) > 50) scrollToPage(startY > e.changedTouches[0].clientY ? 2 : 1); 
+}, {passive: false});
+
 function scrollToPage(p) { container.style.transform = p === 2 ? "translateY(-100dvh)" : "translateY(0)"; }
 
 // BLE
@@ -292,37 +289,34 @@ async function connectBLE() {
         await charTX.startNotifications();
         charTX.addEventListener('characteristicvaluechanged', handleUpdate);
         
-        // SUCCESSFUL CONNECTION
+        // SUCCESS: "Boot Up" the UI
+        document.body.classList.remove('offline'); // <--- LIFE!
         document.getElementById('status').innerText = "ONLINE";
         document.getElementById('status').style.pointerEvents = "none";
         document.getElementById('status').style.color = "#00ff88";
         
-        document.getElementById('connectOverlay').style.display = 'none';
         document.getElementById('coin-box').style.display = 'block';
         document.getElementById('visor').classList.remove('mood-off');
         
-        // [IMPORTANT] Render the eyes now that we are connected!
         renderEyesToMainVisor();
-        
-        // [NEW] Send weather immediately upon connection
         getWeather(); 
-
         lastInputTime = Date.now(); 
     } catch (e) { console.log(e); }
 }
 
 function onDisc() {
-    let s = document.getElementById('status');
-    s.innerText = "TAP TO CONNECT";
-    s.style.pointerEvents = "all";
-    s.style.color = "#444";
-
-    document.getElementById('connectOverlay').style.display = 'flex';
-    document.getElementById('coin-box').style.display = 'none';
-    document.getElementById('visor').className = "visor mood-off";
-    document.body.className = ""; 
+    // DISCONNECT: Kill the UI
+    document.body.classList.add('offline'); // <--- DEATH
     
-    // [IMPORTANT] Clear eyes immediately on disconnect
+    let s = document.getElementById('status');
+    s.innerText = "OFFLINE - TAP TO CONNECT";
+    s.style.pointerEvents = "all";
+    s.style.color = "#888";
+
+    document.getElementById('coin-box').style.display = 'none';
+    document.getElementById('visor').className = "visor";
+    
+    // Clear the eyes
     document.getElementById('visor').innerHTML = '';
     
     scrollToPage(1);
