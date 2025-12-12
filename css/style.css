@@ -13,7 +13,6 @@ body.skin-christmas {
 body { background: var(--bg); color: var(--c); font-family: 'Courier New', monospace; text-align: center; margin: 0; overflow: hidden; touch-action: none; user-select: none; height: 100vh; width: 100vw; }
 
 /* SNOW ANIMATION STYLES */
-/* Note: The snow is hidden by default via JS logic (empty container) */
 .snowflake { position: fixed; top: -10px; color: #FFF; font-size: 1em; user-select: none; z-index: 1; pointer-events: none; animation-name: snow; animation-timing-function: linear; animation-iteration-count: infinite; opacity: 0; }
 @keyframes snow { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(100vh); opacity: 0; } }
 
@@ -40,6 +39,12 @@ body.skin-christmas #connect-btn { border-color: #D42426; color: #FFF; backgroun
 .visor-container { position: relative; width: 220px; margin: 20px auto; }
 .visor { height: 80px; display: flex; align-items: center; justify-content: center; gap: 12px; background: rgba(10,10,10,0.6); border-radius: 40px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 0 20px rgba(0,0,0,0.3); backdrop-filter: blur(10px); transition: 0.3s; }
 body.skin-christmas .visor { border: 2px solid #2F5A28; background: rgba(47, 90, 40, 0.3); }
+
+/* MOOD COLORS */
+.mood-happy .eye, body.mood-happy { --c: #00ff88; --glow: #00ff88; }
+.mood-angry .eye, body.mood-angry { --c: #ff0055; --glow: #ff0055; }
+.mood-tired .eye, body.mood-tired { --c: #aa00ff; --glow: #aa00ff; }
+.mood-love .eye, body.mood-love { --c: #ff66cc; --glow: #ff66cc; }
 
 .eye { background: var(--c); border-radius: 50%; box-shadow: 0 0 15px var(--c); transition: all 0.5s ease; }
 .eye.small { width: 25px; height: 25px; } .eye.big { width: 35px; height: 35px; }
