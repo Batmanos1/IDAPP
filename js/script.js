@@ -5,11 +5,12 @@ let currentHappiness = 50;
 const initialVitalStates = { hap: 50, hun: 80, eng: 10 };
 
 // --- DESIGNER STATE ---
+// [UPDATED] Smaller default sizes to fit physical robot screen (128x64)
 let customEyes = [
-    {id:0, w:25, h:25, r:50, x:-50, y:0},  // Left Outer
-    {id:1, w:35, h:35, r:50, x:-20, y:0},  // Left Inner
-    {id:2, w:35, h:35, r:50, x:20, y:0},   // Right Inner
-    {id:3, w:25, h:25, r:50, x:50, y:0}    // Right Outer
+    {id:0, w:15, h:15, r:50, x:-50, y:0},  // Left Outer (was 25)
+    {id:1, w:25, h:25, r:50, x:-20, y:0},  // Left Inner (was 35)
+    {id:2, w:25, h:25, r:50, x:20, y:0},   // Right Inner (was 35)
+    {id:3, w:15, h:15, r:50, x:50, y:0}    // Right Outer (was 25)
 ];
 let selectedEyeIndex = -1;
 
@@ -59,11 +60,12 @@ function closeDesigner() {
 
 function loadPreset(name) {
     if(name === 'incy') {
+        // [UPDATED] Preset also updated to match smaller default sizes
         customEyes = [
-            {id:0, w:25, h:25, r:50, x:-50, y:0}, 
-            {id:1, w:35, h:35, r:50, x:-20, y:0},
-            {id:2, w:35, h:35, r:50, x:20, y:0},   
-            {id:3, w:25, h:25, r:50, x:50, y:0}
+            {id:0, w:15, h:15, r:50, x:-50, y:0}, 
+            {id:1, w:25, h:25, r:50, x:-20, y:0},
+            {id:2, w:25, h:25, r:50, x:20, y:0},   
+            {id:3, w:15, h:15, r:50, x:50, y:0}
         ];
     }
     else if(name === 'glitch') {
