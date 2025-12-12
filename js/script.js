@@ -5,32 +5,29 @@ const sUUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
 const cRX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
 const cTX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
 
-const btnState = { 
-    L: { taps: 0, timer: null }, 
-    R: { taps: 0, timer: null } 
-};
+const btnState = { L: { taps: 0, timer: null }, R: { taps: 0, timer: null } };
 
 let isGameRunning = false; 
 let lastInputTime = Date.now();
 let currentHappiness = 50; 
 let robotBaseColor = "#00e5ff"; 
 
-let minEyeX = 1000, maxEyeX = -1000;
-let minEyeY = 1000, maxEyeY = -1000;
-let currentVitals = { hap: 50, hun: 80, eng: 100 };
+// Canvas / Editor Vars
+let eyes = [{x: 44, y: 32, w: 24, h: 24, r: 12}, {x: 84, y: 32, w: 24, h: 24, r: 12}]; 
+let canvas, ctx, selectedEyeIndex = -1, draggingEye = null;
 
-let dev, serv, charRX, charTX;
-let snowInterval;
+let dev, serv, charRX, charTX, snowInterval;
 
 window.addEventListener('load', () => { 
     setInterval(checkIdleStatus, 1000); 
-    document.body.classList.add('offline');
     initCanvas(); 
     setupVisorInteractions();
+    setupJoystick();
+    renderLocalVisor(eyes); // Show default eyes immediately
 });
 
 // ==========================================
-//  BLUETOOTH CONNECTION
+//  BLUETOOTH
 // ==========================================
 async function connectBLE() {
     try {
@@ -43,51 +40,22 @@ async function connectBLE() {
         await charTX.startNotifications();
         charTX.addEventListener('characteristicvaluechanged', handleUpdate);
         
-        // UI Updates on Connect
-        let stat = document.getElementById('status');
-        if(stat) {
-            stat.innerText = "ONLINE"; 
-            stat.classList.add('on'); 
-        }
-        let ov = document.getElementById('connectOverlay');
-        if(ov) ov.style.display = 'none';
-        
-        // [NEW] Show Weather Box
-        let wBox = document.getElementById('weather-box');
-        if(wBox) wBox.style.display = 'flex';
-        
+        document.getElementById('status').innerText = "ONLINE"; 
+        document.getElementById('connectOverlay').style.display = 'none';
+        document.getElementById('weather-box').style.display = 'flex';
         lastInputTime = Date.now(); 
     } catch (e) { console.log(e); }
 }
 
 function onDisc() {
-    let stat = document.getElementById('status');
-    if(stat) {
-        stat.innerText = "OFFLINE"; 
-        stat.classList.remove('on'); 
-    }
-    let ov = document.getElementById('connectOverlay');
-    if(ov) ov.style.display = 'block'; 
-    
-    let cb = document.getElementById('coin-box');
-    if(cb) cb.style.display = 'none'; 
-    
-    // Hide Weather Box
-    let wBox = document.getElementById('weather-box');
-    if(wBox) wBox.style.display = 'none';
-
-    document.getElementById('visor').className = "visor mood-off"; 
-    document.body.className = ""; 
+    document.getElementById('status').innerText = "OFFLINE"; 
+    document.getElementById('connectOverlay').style.display = 'block'; 
+    document.getElementById('weather-box').style.display = 'none';
     document.body.classList.add('offline'); 
-    let bg = document.getElementById('nebula-bg');
-    if(bg) bg.classList.remove('alive'); 
-    scrollToPage(1); 
-    document.getElementById('visor').innerHTML = '';
 }
 
 async function send(cmd) { 
     if(!charRX) return; 
-    if (navigator.vibrate) navigator.vibrate(15); 
     try { await charRX.writeValue(new TextEncoder().encode(cmd)); } catch(e){}
 }
 
@@ -97,514 +65,230 @@ function handleUpdate(event) {
     
     if (type === 'I') applyRobotIdentity(data);
     else if (type === 'L') addDynamicEye(data);
-    else if (type === 'H') { 
-        let scores = data.split(','); 
-        if(document.getElementById('hs-mem')) document.getElementById('hs-mem').innerText = "HS: " + scores[0]; 
-        if(document.getElementById('hs-ref')) document.getElementById('hs-ref').innerText = "HS: " + scores[1]; 
-        if(document.getElementById('hs-slot')) document.getElementById('hs-slot').innerText = "STRK: " + scores[2]; 
-        if(document.getElementById('val-coins')) document.getElementById('val-coins').innerText = scores[3]; 
+    else if (type === 'C') { document.getElementById('val-coins').innerText = data; }
+    else if (type === 'M') updateMood(parseInt(data));
+    else if (type === 'T') { /* Handle text if needed */ }
+}
+
+function applyRobotIdentity(data) {
+    let parts = data.split('|');
+    if (parts.length > 1) {
+        document.getElementById('app-title').innerText = parts[1].toUpperCase();
+        document.getElementById('rename-input').value = parts[1];
     }
-    else if (type === 'T') { 
-        let txtDiv = document.getElementById('game-text'); 
-        if(txtDiv) {
-            txtDiv.innerText = data; 
-            if(data.length > 0) txtDiv.classList.add('active'); else txtDiv.classList.remove('active'); 
-        }
-        if (data === "GAME OVER" || data === "WINNER!" || data === "LOSE!") { setTimeout(() => { isGameRunning = false; }, 1000); } 
+    if (parts.length > 2) {
+        document.getElementById('coin-box').style.display = 'block';
+        document.getElementById('val-coins').innerText = parts[2];
     }
-    else if (type === 'C') { if(document.getElementById('val-coins')) document.getElementById('val-coins').innerText = data; }
-    else if (type === 'A') { 
-        currentVitals.hap = parseInt(data); currentHappiness = currentVitals.hap; 
-        updateBackgroundVitals(currentVitals); updateVisorMood(currentHappiness); 
-    }
-    else if (type === 'M') { 
-        let num = parseInt(data); 
-        let v = document.getElementById('visor'); let b = document.body; 
-        v.className = "visor"; b.className = ""; 
-        
-        // Respect Christmas Skin if active
-        if (document.body.classList.contains('skin-christmas')) {
-            // Keep christmas class
-            b.classList.add('skin-christmas');
-        } else if(robotBaseColor) { 
-            document.documentElement.style.setProperty('--c', robotBaseColor); 
-            document.documentElement.style.setProperty('--glow', robotBaseColor); 
-        } 
-        
-        if (num === 1) { v.classList.add('mood-happy'); b.classList.add('mood-happy'); } 
-        if (num === 2) { v.classList.add('mood-angry'); b.classList.add('mood-angry'); } 
-        if (num === 3) { v.classList.add('mood-tired'); b.classList.add('mood-tired'); } 
-        if (num === 5) { v.classList.add('mood-love'); b.classList.add('mood-love'); } 
-        if (num === 0) v.classList.remove('mood-sleep'); 
-        lastInputTime = Date.now(); 
+    if (parts.length > 3 && !document.body.classList.contains('skin-christmas')) {
+        robotBaseColor = parts[3];
+        document.documentElement.style.setProperty('--c', robotBaseColor);
+        document.documentElement.style.setProperty('--glow', robotBaseColor);
     }
 }
 
 // ==========================================
-//  [NEW] REAL WEATHER SYNC
+//  INTERACTION & CONTROLS
 // ==========================================
-function syncWeather() {
-    const btn = document.getElementById('btn-sync');
-    if(!btn) return;
-    btn.innerText = "LOCATING...";
-    
-    if (!navigator.geolocation) {
-        alert("Geolocation is not supported by your browser");
-        btn.innerText = "NO GEO SUPPORT";
-        return;
-    }
-
-    navigator.geolocation.getCurrentPosition(async (position) => {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        btn.innerText = "FETCHING...";
-
-        try {
-            const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
-            const data = await response.json();
-            
-            const temp = Math.round(data.current_weather.temperature);
-            const wCode = data.current_weather.weathercode;
-            
-            let type = 0; 
-            if (wCode >= 51) type = 1; 
-
-            send("W:" + temp + "," + type);
-            
-            btn.innerText = "SENT: " + temp + "°C";
-            setTimeout(() => { btn.innerText = "☁ SYNC LOCAL WEATHER"; }, 3000);
-
-        } catch (error) {
-            console.error("Weather Error:", error);
-            btn.innerText = "API ERROR";
-            setTimeout(() => { btn.innerText = "☁ SYNC LOCAL WEATHER"; }, 3000);
-        }
-    }, (err) => {
-        console.warn("Geo Error: " + err.code);
-        btn.innerText = "LOC PERMISSION DENIED";
-        setTimeout(() => { btn.innerText = "☁ SYNC LOCAL WEATHER"; }, 3000);
-    });
-}
-
-// ==========================================
-//  [NEW] SKIN & SNOW LOGIC
-// ==========================================
-function setSkin(name) {
-    document.body.className = ""; // Reset body classes
-    document.querySelectorAll('.skin-dot').forEach(d => d.classList.remove('active'));
-    
-    if (name === 'christmas') {
-        document.body.classList.add('skin-christmas');
-        let dot = document.querySelector('.s-xmas');
-        if(dot) dot.classList.add('active');
-        startSnow();
-    } else {
-        let dot = document.querySelector('.s-def');
-        if(dot) dot.classList.add('active');
-        stopSnow(); 
-        
-        // Restore robot color
-        if(robotBaseColor) {
-             document.documentElement.style.setProperty('--c', robotBaseColor); 
-             document.documentElement.style.setProperty('--glow', robotBaseColor);
-        }
-    }
-}
-
-function startSnow() {
-    if(snowInterval) return; 
-    const container = document.getElementById('snow-container');
-    if(!container) return;
-    container.style.display = 'block';
-    
-    snowInterval = setInterval(() => {
-        const flake = document.createElement('div');
-        flake.classList.add('snowflake');
-        flake.style.left = Math.random() * 100 + 'vw';
-        flake.style.animationDuration = Math.random() * 3 + 2 + 's'; 
-        flake.style.opacity = Math.random();
-        flake.innerHTML = '❄';
-        container.appendChild(flake);
-        setTimeout(() => { flake.remove(); }, 5000);
-    }, 100);
-}
-
-function stopSnow() {
-    clearInterval(snowInterval);
-    snowInterval = null;
-    const container = document.getElementById('snow-container');
-    if(container) {
-        container.innerHTML = ''; 
-        container.style.display = 'none';
-    }
-}
-
-// ==========================================
-//  INPUT & INTERACTION
-// ==========================================
-
-// --- VISOR INTERACTIONS (Pet/Poke) ---
 function setupVisorInteractions() {
-    const visor = document.getElementById('visor');
-    let isDragging = false;
-    let startX = 0, startY = 0;
-    let moveDistance = 0;
-    let dragStartTime = 0;
-
-    const isEyeTarget = (t) => t.classList.contains('eye');
-    
-    if (!visor) return;
-
-    visor.addEventListener('pointerdown', (e) => {
-        isDragging = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        moveDistance = 0;
-        dragStartTime = Date.now();
-        visor.setPointerCapture(e.pointerId);
-    });
-
-    visor.addEventListener('pointermove', (e) => {
-        if (!isDragging) return;
-        let dx = e.clientX - startX;
-        let dy = e.clientY - startY;
-        moveDistance += Math.sqrt(dx*dx + dy*dy);
-        
-        if (moveDistance > 30) {
-            if (moveDistance % 60 < 10) { 
-                send('P'); 
-                visor.style.transform = `scale(1.02) rotate(${Math.sin(Date.now()/100)*1}deg)`;
-            }
-        }
-        startX = e.clientX; startY = e.clientY;
-    });
-
-    visor.addEventListener('pointerup', (e) => {
-        isDragging = false;
-        visor.style.transform = "scale(1) rotate(0deg)";
-        let duration = Date.now() - dragStartTime;
-
-        if (moveDistance < 10 && duration < 400) {
-            if (isEyeTarget(e.target)) {
-                send('R'); 
-                visor.classList.add('mood-angry');
-                setTimeout(()=>visor.classList.remove('mood-angry'), 500);
-            } else {
-                let rect = visor.getBoundingClientRect();
-                let relX = e.clientX - rect.left;
-                if(relX < rect.width / 2) send('L'); else send('R');
-            }
-        }
-    });
+    const v = document.getElementById('visor');
+    if(!v) return;
+    v.addEventListener('pointerdown', () => send('P')); // Poke = Purr
 }
 
-// --- BUTTONS (Single/Double Tap) ---
 window.handleBtnInput = function(id) {
     if(isGameRunning) { send(id); return; } 
-    
-    let btn = btnState[id];
-    btn.taps++;
-    
+    let btn = btnState[id]; btn.taps++;
     let el = document.getElementById('btn-' + id);
-    if(el) {
-        el.classList.add('pressing');
-        setTimeout(() => el.classList.remove('pressing'), 150);
-    }
+    if(el) { el.classList.add('pressing'); setTimeout(() => el.classList.remove('pressing'), 150); }
 
     if (btn.taps === 1) {
         btn.timer = setTimeout(() => {
-            if (id === 'L') send('H'); // Laugh
+            if (id === 'L') send('H'); // Happy
             if (id === 'R') send('K'); // Skitter
             btn.taps = 0;
         }, 300);
     } else {
         clearTimeout(btn.timer);
         if (id === 'L') send('S'); // Sing
-        if (id === 'R') console.log("R-Double");
         btn.taps = 0;
     }
 }
-// Mapping for new UI calls (if index.html uses different names)
 function btnDown(k) { handleBtnInput(k); }
 function btnUp(k) { } 
 
-// --- JOYSTICK ---
-let joyZone = document.getElementById('joystick-zone');
-let stick = document.getElementById('stick');
-let isDraggingJoy = false;
-if(joyZone) {
-    joyZone.addEventListener('mousedown', () => isDraggingJoy = true);
-    joyZone.addEventListener('touchstart', () => isDraggingJoy = true);
-    window.addEventListener('mouseup', endJoy);
-    window.addEventListener('touchend', endJoy);
-    window.addEventListener('mousemove', moveJoy);
-    window.addEventListener('touchmove', moveJoy);
+// JOYSTICK LOGIC
+function setupJoystick() {
+    let zone = document.getElementById('joystick-zone');
+    let stick = document.getElementById('stick');
+    let drag = false;
+    
+    const move = (e) => {
+        if (!drag) return; e.preventDefault();
+        const rect = zone.getBoundingClientRect();
+        const cX = e.touches ? e.touches[0].clientX : e.clientX;
+        const cY = e.touches ? e.touches[0].clientY : e.clientY;
+        let x = cX - rect.left - 70; let y = cY - rect.top - 70; // 70 is half of 140px width
+        let dist = Math.sqrt(x*x + y*y);
+        if (dist > 50) { x = (x / dist) * 50; y = (y / dist) * 50; }
+        
+        stick.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+        
+        // Map to -50 to 50 range for robot
+        let sx = Math.floor(x); let sy = Math.floor(y * 0.6); // Y is usually less sensitive
+        if (Math.random() > 0.8) send(`J:${sx},${sy}`);
+    };
+    
+    const end = () => { drag = false; stick.style.transform = "translate(-50%, -50%)"; send("J:0,0"); };
+    
+    zone.addEventListener('mousedown', () => drag = true);
+    zone.addEventListener('touchstart', () => drag = true);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('touchmove', move);
+    window.addEventListener('mouseup', end);
+    window.addEventListener('touchend', end);
 }
-function moveJoy(e) {
-    if (!isDraggingJoy) return; e.preventDefault();
-    const rect = joyZone.getBoundingClientRect();
-    const cX = e.touches ? e.touches[0].clientX : e.clientX;
-    const cY = e.touches ? e.touches[0].clientY : e.clientY;
-    let x = cX - rect.left - 80; let y = cY - rect.top - 80;
-    let dist = Math.sqrt(x*x + y*y);
-    if (dist > 60) { x = (x / dist) * 60; y = (y / dist) * 60; }
-    stick.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
-    let sendX = Math.floor((x / 60) * 50); let sendY = Math.floor((y / 60) * 30);
-    if (Math.random() > 0.8) send(`J:${sendX},${sendY}`);
-}
-function endJoy() { if (!isDraggingJoy) return; isDraggingJoy = false; stick.style.transform = `translate(-50%, -50%)`; send(`J:0,0`); }
-
-// --- SWIPE (Page Navigation) ---
-let startY = 0; const container = document.getElementById('app-container');
-function handleStart(y) { startY = y; }
-function handleEnd(y) { 
-    if(!container) return;
-    if (Math.abs(startY - y) > 50) { scrollToPage(startY > y ? 2 : 1); } 
-}
-document.addEventListener('touchstart', e => handleStart(e.touches[0].clientY), {passive: false});
-document.addEventListener('touchend', e => handleEnd(e.changedTouches[0].clientY), {passive: false});
-document.addEventListener('mousedown', e => handleStart(e.clientY));
-document.addEventListener('mouseup', e => handleEnd(e.clientY));
-function scrollToPage(p) { if(container) container.style.transform = p === 2 ? "translateY(-100vh)" : "translateY(0)"; }
 
 // ==========================================
 //  WORKSHOP & EDITOR
 // ==========================================
-let eyes = [{x: 44, y: 32, w: 24, h: 24, r: 12}, {x: 84, y: 32, w: 24, h: 24, r: 12}]; 
-let canvas, ctx, selectedEyeIndex = -1;
-
 function initCanvas() {
     canvas = document.getElementById('face-canvas');
     if(!canvas) return;
     ctx = canvas.getContext('2d');
-    drawFace();
     
-    canvas.addEventListener('mousedown', startDrag);
-    canvas.addEventListener('touchstart', startDrag);
-    canvas.addEventListener('mousemove', moveDrag);
-    canvas.addEventListener('touchmove', moveDrag);
-    canvas.addEventListener('mouseup', () => draggingEye = null);
-    canvas.addEventListener('touchend', () => draggingEye = null);
+    const getPos = (e) => {
+        const r = canvas.getBoundingClientRect();
+        const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+        const y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
+        return { x: x * (256/r.width), y: y * (128/r.height) };
+    };
+    
+    const start = (e) => {
+        let p = getPos(e);
+        let found = false;
+        eyes.forEach((eye, i) => {
+            if (p.x >= (eye.x*2)-eye.w && p.x <= (eye.x*2)+eye.w && p.y >= (eye.y*2)-eye.h && p.y <= (eye.y*2)+eye.h) {
+                draggingEye = eye; selectedEyeIndex = i; found = true;
+                document.getElementById('eye-controls').style.display = 'flex';
+                document.getElementById('edit-w').value = eye.w;
+                document.getElementById('edit-h').value = eye.h;
+                document.getElementById('edit-r').value = eye.r || 0;
+            }
+        });
+        if(!found) { selectedEyeIndex = -1; document.getElementById('eye-controls').style.display = 'none'; }
+        drawFace();
+    };
+    
+    const move = (e) => {
+        if(!draggingEye) return; e.preventDefault();
+        let p = getPos(e);
+        draggingEye.x = Math.floor(p.x / 2); draggingEye.y = Math.floor(p.y / 2);
+        drawFace();
+    };
+    
+    canvas.addEventListener('mousedown', start); canvas.addEventListener('touchstart', start);
+    canvas.addEventListener('mousemove', move); canvas.addEventListener('touchmove', move);
+    window.addEventListener('mouseup', () => draggingEye=null); window.addEventListener('touchend', () => draggingEye=null);
 }
 
 function drawFace() {
-    if(!ctx) return;
     ctx.fillStyle = "#000"; ctx.fillRect(0,0,256,128);
-    let strokeColor = document.body.classList.contains('skin-christmas') ? "#ff3333" : robotBaseColor;
-    let fillColor = document.body.classList.contains('skin-christmas') ? "#ff3333" : robotBaseColor;
-    
-    ctx.strokeStyle = strokeColor; ctx.lineWidth = 2; ctx.strokeRect(0,0,256,128);
+    let col = document.body.classList.contains('skin-christmas') ? "#D42426" : robotBaseColor;
+    ctx.strokeStyle = "#333"; ctx.lineWidth = 2; ctx.strokeRect(0,0,256,128);
     
     eyes.forEach((e, i) => {
-        ctx.fillStyle = (i === selectedEyeIndex) ? "#fff" : fillColor;
-        let cx = e.x * 2; let cy = e.y * 2;
-        let cw = e.w * 2; let ch = e.h * 2;
-        let cr = (e.r || 0) * 2;
+        ctx.fillStyle = (i === selectedEyeIndex) ? "#FFF" : col;
         ctx.beginPath();
-        if(ctx.roundRect) ctx.roundRect(cx - cw/2, cy - ch/2, cw, ch, cr);
-        else ctx.rect(cx - cw/2, cy - ch/2, cw, ch);
+        let x = e.x*2 - e.w, y = e.y*2 - e.h, w = e.w*2, h = e.h*2;
+        if(ctx.roundRect) ctx.roundRect(x, y, w, h, (e.r||0)*2); else ctx.rect(x,y,w,h);
         ctx.fill();
     });
 }
 
-function renderLocalVisor(eyeList) {
-    const visor = document.getElementById('visor');
-    if(!visor) return;
-    visor.innerHTML = ''; 
-    minEyeX = 1000; maxEyeX = -1000; minEyeY = 1000; maxEyeY = -1000;
-    const scale = 2.2; 
-
-    eyeList.forEach(e => {
-        let div = document.createElement('div');
-        div.className = 'eye';
-        let finalW = e.w * scale; let finalH = e.h * scale;
-        let relX = (e.x - 64) * scale; let relY = (e.y - 32) * scale;
-
-        div.style.width = finalW + 'px'; div.style.height = finalH + 'px';
-        div.style.left = `calc(50% + ${relX}px)`; div.style.top = `calc(50% + ${relY}px)`;
-        let rad = (e.r || 0) * scale; div.style.borderRadius = rad + "px";
-
-        visor.appendChild(div);
-        
-        let halfW = finalW / 2; let halfH = finalH / 2;
-        if (relX - halfW < minEyeX) minEyeX = relX - halfW;
-        if (relX + halfW > maxEyeX) maxEyeX = relX + halfW;
-        if (relY - halfH < minEyeY) minEyeY = relY - halfH;
-        if (relY + halfH > maxEyeY) maxEyeY = relY + halfH;
-    });
-    updateVisorGeometry();
-}
-
-function updateVisorGeometry() {
-    const visor = document.getElementById('visor');
-    if(!visor) return;
-    const paddingX = 40; const paddingY = 30; const minW = 100; const minH = 60;
-    let contentW = (maxEyeX - minEyeX);
-    let contentH = (maxEyeY - minEyeY);
-    let finalW = Math.max(minW, contentW + paddingX);
-    let finalH = Math.max(minH, contentH + paddingY);
-    visor.style.width = finalW + "px";
-    visor.style.height = finalH + "px";
-    let rad = Math.min(finalW, finalH) / 2;
-    visor.style.borderRadius = Math.min(30, rad) + "px";
-}
-
-// Editor Utilities
-function selectEye(index) {
-    selectedEyeIndex = index;
-    let controls = document.getElementById('eye-controls');
-    if(index > -1 && controls) {
-        controls.style.display = 'block';
-        document.getElementById('edit-w').value = eyes[index].w;
-        document.getElementById('edit-h').value = eyes[index].h;
-        document.getElementById('edit-r').value = eyes[index].r || 0;
-    } else if (controls) {
-        controls.style.display = 'none';
-    }
-    drawFace();
-}
-
+window.addEye = function() { eyes.push({x: 64, y: 32, w: 24, h: 24, r: 5}); selectedEyeIndex = eyes.length-1; drawFace(); };
+window.clearCanvas = function() { eyes = []; selectedEyeIndex = -1; drawFace(); };
 window.updateEyeParam = function() {
     if(selectedEyeIndex === -1) return;
     eyes[selectedEyeIndex].w = parseInt(document.getElementById('edit-w').value);
     eyes[selectedEyeIndex].h = parseInt(document.getElementById('edit-h').value);
     eyes[selectedEyeIndex].r = parseInt(document.getElementById('edit-r').value);
     drawFace();
-}
-
-window.addEye = function() { 
-    if(eyes.length < 8) { 
-        let offsetX = (eyes.length % 2 === 0) ? 20 : -20;
-        let offsetY = (eyes.length > 2) ? 10 : 0;
-        eyes.push({x: 64 + offsetX, y: 32 + offsetY, w: 24, h: 24, r: 5}); 
-        selectEye(eyes.length-1); 
-    } 
-}
-window.clearCanvas = function() { eyes = []; selectEye(-1); drawFace(); }
+};
 window.uploadFace = function() {
     let str = `U:${eyes.length}`;
-    eyes.forEach(e => { str += `;${Math.floor(e.x-64)},${Math.floor(e.y-32)},${e.w},${e.h},${e.r||0}`; });
-    send(str);
-    renderLocalVisor(eyes);
-    closeWorkshop();
-}
+    eyes.forEach(e => { str += `;${e.x-64},${e.y-32},${e.w},${e.h},${e.r||0}`; });
+    send(str); renderLocalVisor(eyes); closeWorkshop();
+};
 
-// Dragging Logic
-let draggingEye = null;
-function getPos(e) {
-    if(!canvas) return {x:0, y:0};
-    const rect = canvas.getBoundingClientRect();
-    const cX = e.touches ? e.touches[0].clientX : e.clientX;
-    const cY = e.touches ? e.touches[0].clientY : e.clientY;
-    const scaleX = 128 / rect.width;
-    const scaleY = 64 / rect.height;
-    return { x: (cX - rect.left) * scaleX, y: (cY - rect.top) * scaleY };
-}
-function startDrag(e) {
-    let pos = getPos(e);
-    let found = false;
-    eyes.forEach((eye, i) => {
-        if (pos.x >= eye.x - eye.w/2 && pos.x <= eye.x + eye.w/2 && pos.y >= eye.y - eye.h/2 && pos.y <= eye.y + eye.h/2) {
-            draggingEye = eye;
-            selectEye(i);
-            found = true;
-        }
+function renderLocalVisor(list) {
+    let v = document.getElementById('visor'); v.innerHTML = '';
+    list.forEach(e => {
+        let d = document.createElement('div'); d.className = 'eye';
+        d.style.width = (e.w * 2.2) + 'px'; d.style.height = (e.h * 2.2) + 'px';
+        d.style.left = `calc(50% + ${(e.x - 64)*2.2}px)`; d.style.top = `calc(50% + ${(e.y - 32)*2.2}px)`;
+        d.style.borderRadius = ((e.r||0)*2.2) + 'px';
+        v.appendChild(d);
     });
-    if(!found) selectEye(-1);
-}
-function moveDrag(e) {
-    if(!draggingEye) return;
-    e.preventDefault();
-    let pos = getPos(e);
-    draggingEye.x = Math.floor(pos.x);
-    draggingEye.y = Math.floor(pos.y);
-    drawFace();
 }
 
-// --- IDENTITY & VITALS ---
-function applyRobotIdentity(dataString) {
-    let parts = dataString.split('|');
-    if (parts.length < 8) return; 
-    let rName = parts[1];
-    let rCoins = parts[2];
-    let rColor = parts[3]; 
-
-    document.getElementById('app-title').innerText = rName.toUpperCase();
-    if(document.getElementById('rename-input')) document.getElementById('rename-input').value = rName;
-    
-    if(rCoins) {
-        let cb = document.getElementById('val-coins');
-        if(cb) cb.innerText = rCoins;
-        document.getElementById('coin-box').style.display = 'block';
-    }
-    if(rColor) {
-        robotBaseColor = rColor;
-        // Only apply if not in Christmas mode
-        if(!document.body.classList.contains('skin-christmas')) {
-            document.documentElement.style.setProperty('--c', rColor);
-            document.documentElement.style.setProperty('--glow', rColor);
-        }
-        document.body.classList.remove('offline');
-        document.getElementById('nebula-bg').classList.add('alive');
-    }
-    if (parts.length >= 12) {
-        currentVitals.hap = parseInt(parts[9]);
-        currentVitals.hun = parseInt(parts[10]);
-        currentVitals.eng = parseInt(parts[11]);
-        currentHappiness = currentVitals.hap;
-        updateBackgroundVitals(currentVitals);
-        updateVisorMood(currentHappiness);
-    }
-    if(document.getElementById('visor').children.length === 0) {
-        document.getElementById('visor').innerHTML = '';
-        minEyeX = 1000; maxEyeX = -1000; minEyeY = 1000; maxEyeY = -1000;
-    }
-}
-
-function updateBackgroundVitals(vitals) {
-    if(document.getElementById('bar-hap')) {
-        document.getElementById('bar-hap').style.width = vitals.hap + '%';
-        document.getElementById('val-hap').innerText = vitals.hap + '%';
-        document.getElementById('bar-hun').style.width = vitals.hun + '%'; 
-        document.getElementById('val-hun').innerText = vitals.hun + '%';
-        document.getElementById('bar-eng').style.width = vitals.eng + '%';
-        document.getElementById('val-eng').innerText = vitals.eng + '%';
-    }
-}
-
-function addDynamicEye(dataString) {
-    let coords = dataString.split(',');
-    let newEyes = [];
-    newEyes.push({ 
-        x: parseInt(coords[0]) + 64, 
-        y: parseInt(coords[1]) + 32, 
-        w: parseInt(coords[2]), 
-        h: parseInt(coords[3]),
-        r: parseInt(coords[3])/2 
+// ==========================================
+//  UTILS (Weather, Skins, Rename)
+// ==========================================
+function syncWeather() {
+    let btn = document.getElementById('btn-sync'); btn.innerText = "WAIT...";
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        try {
+            let res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&current_weather=true`);
+            let data = await res.json();
+            let temp = Math.round(data.current_weather.temperature);
+            let code = data.current_weather.weathercode >= 51 ? 1 : 0;
+            send(`W:${temp},${code}`);
+            btn.innerText = `SENT ${temp}°C`; setTimeout(() => btn.innerText = "☁ SYNC WEATHER", 3000);
+        } catch(e) { btn.innerText = "ERROR"; }
     });
-    // Append to DOM immediately for live loading
-    renderLocalVisor(newEyes);
 }
 
-// --- MENUS ---
-function startGame(id) { send(id); isGameRunning = true; closeMenu(); lastInputTime = Date.now(); }
-function stopGame() { send('X'); isGameRunning = false; closeMenu(); lastInputTime = Date.now(); }
+function setSkin(name) {
+    document.body.className = ""; document.querySelectorAll('.skin-dot').forEach(d => d.classList.remove('active'));
+    if (name === 'christmas') {
+        document.body.classList.add('skin-christmas'); document.querySelector('.s-xmas').classList.add('active');
+        startSnow();
+    } else {
+        document.querySelector('.s-def').classList.add('active'); stopSnow();
+        document.documentElement.style.setProperty('--c', robotBaseColor);
+        document.documentElement.style.setProperty('--glow', robotBaseColor);
+    }
+    drawFace(); // Redraw canvas with new color
+}
+
+function startSnow() {
+    if(snowInterval) return;
+    snowInterval = setInterval(() => {
+        let f = document.createElement('div'); f.className = 'snowflake'; f.innerHTML = '❄';
+        f.style.left = Math.random()*100+'vw'; f.style.animationDuration = (Math.random()*3+2)+'s';
+        document.getElementById('snow-container').appendChild(f);
+        setTimeout(()=>f.remove(), 5000);
+    }, 200);
+}
+function stopSnow() { clearInterval(snowInterval); snowInterval = null; document.getElementById('snow-container').innerHTML = ''; }
+
+function renameRobot() {
+    let n = document.getElementById('rename-input').value;
+    if(n) { send("N:" + n); document.getElementById('app-title').innerText = n.toUpperCase(); }
+}
+
+function updateMood(m) {
+    let v = document.getElementById('visor'); v.className = "visor";
+    if (m===1) v.classList.add('mood-happy'); if (m===2) v.classList.add('mood-angry');
+    if (m===5) v.classList.add('mood-love');
+}
+
+// Menus
 function openMenu() { document.getElementById('menuModal').style.display = 'flex'; send('Q'); }
 function closeMenu() { document.getElementById('menuModal').style.display = 'none'; }
-function openWorkshop() { document.getElementById('workshopModal').style.display = 'flex'; }
+function openWorkshop() { document.getElementById('workshopModal').style.display = 'flex'; initCanvas(); }
 function closeWorkshop() { document.getElementById('workshopModal').style.display = 'none'; }
-function checkIdleStatus() {
-    if (document.getElementById('status').innerText === "ONLINE" && (Date.now() - lastInputTime > 5000)) {
-        updateVisorMood(currentHappiness);
-    }
-}
-function updateVisorMood(happiness) {
-    let v = document.getElementById('visor');
-    let b = document.body;
-    v.className = "visor"; b.className = "";
-    if (document.body.classList.contains('skin-christmas')) b.classList.add('skin-christmas');
-    
-    if (happiness >= 90) { v.classList.add('mood-love'); b.classList.add('mood-love'); }
-    else if (happiness > 60) { v.classList.add('mood-happy'); b.classList.add('mood-happy'); } 
-    else if (happiness < 30) { v.classList.add('mood-angry'); b.classList.add('mood-angry'); }
-}
+function checkIdleStatus() { /* Optional mood revert logic */ }
+function addDynamicEye(data) { /* Optional dynamic layout logic */ }
