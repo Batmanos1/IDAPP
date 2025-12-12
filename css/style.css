@@ -15,25 +15,37 @@ body.skin-christmas #nebula-bg { opacity: 0.2; }
 
 /* LAYOUT */
 #app-container { height: 100%; display: flex; flex-direction: column; justify-content: space-between; position: relative; z-index: 2; padding: 20px; box-sizing: border-box; }
-.top-bar { position: absolute; top: 60px; right: 20px; left: 20px; display: flex; justify-content: space-between; pointer-events: none; }
-.top-bar > * { pointer-events: auto; }
 
-/* HEADER */
-h1 { margin: 10px 0 0; text-shadow: 0 0 10px var(--c); letter-spacing: 2px; font-size: 28px; transition: color 0.5s; }
-.subtitle { font-size: 12px; color: #666; letter-spacing: 1px; margin-top: 5px; }
-
-/* CONNECT BUTTON */
+/* TOP BUTTONS */
 #connect-btn { 
     position: absolute; top: 20px; right: 20px; 
     background: transparent; border: 1px solid var(--c); color: var(--c); 
     padding: 5px 15px; font-weight: bold; cursor: pointer; z-index: 10;
     box-shadow: 0 0 5px var(--glow); transition: 0.3s;
 }
-body.skin-christmas #connect-btn { border-color: #D42426; background: #D42426; color: white; }
+#btn-edit-face {
+    position: absolute; top: 20px; left: 20px;
+    background: rgba(0,0,0,0.5); border: 1px solid var(--c); color: var(--c);
+    padding: 5px 10px; font-size: 11px; cursor: pointer; z-index: 10;
+    box-shadow: 0 0 5px var(--glow);
+}
+body.skin-christmas #connect-btn, body.skin-christmas #btn-edit-face { border-color: #D42426; background: #D42426; color: white; }
 
-/* WEATHER & COINS */
-#coin-box { font-weight: bold; text-shadow: 0 0 5px var(--c); }
-.weather-btn { background: rgba(0,0,0,0.5); border: 1px solid var(--c); color: var(--c); padding: 5px 10px; font-size: 10px; cursor: pointer; }
+/* VITALS HUD */
+#vitals-container {
+    position: absolute; top: 60px; left: 20px; width: 120px;
+    display: flex; flex-direction: column; gap: 5px; z-index: 5;
+    pointer-events: none; opacity: 0.8;
+}
+.vital-row { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #aaa; }
+.vital-label { width: 25px; text-align: right; }
+.vital-bar-bg { flex: 1; height: 4px; background: #333; border-radius: 2px; overflow: hidden; }
+.vital-fill { height: 100%; transition: width 0.5s; box-shadow: 0 0 5px currentColor; }
+.vital-val { width: 25px; text-align: right; font-size: 9px; }
+
+/* HEADER */
+h1 { margin: 20px 0 0; text-shadow: 0 0 10px var(--c); letter-spacing: 2px; font-size: 28px; transition: color 0.5s; }
+.subtitle { font-size: 12px; color: #666; letter-spacing: 1px; margin-top: 5px; }
 
 /* VISOR */
 .visor-container { position: relative; width: 100%; max-width: 300px; margin: 0 auto; flex: 1; display: flex; align-items: center; justify-content: center; }
@@ -41,28 +53,38 @@ body.skin-christmas #connect-btn { border-color: #D42426; background: #D42426; c
 body.skin-christmas .visor { border: 2px solid #2F5A28; background: rgba(47, 90, 40, 0.3); }
 .eye { position: absolute; transform: translate(-50%, -50%); background: var(--c); border-radius: 50%; box-shadow: 0 0 15px var(--c); transition: all 0.2s ease; }
 
-/* CONTROLS AREA */
+/* CONTROLS */
 .controls-area { display: flex; flex-direction: column; align-items: center; gap: 20px; margin-bottom: 20px; }
 .controls { display: flex; justify-content: center; align-items: center; gap: 20px; }
-
 .btn-round { width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(145deg, #1a1a1a, #0a0a0a); border: 2px solid #333; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; box-shadow: inset 0 0 10px #000; }
 .btn-round:active { border-color: var(--c); }
 .menu-btn { font-size: 12px; color: var(--c); border-color: var(--c); width: 50px; height: 50px; }
 .btn-eye { background: var(--c); border-radius: 50%; box-shadow: 0 0 5px var(--glow); }
 .btn-eye.b-s { width: 8px; height: 8px; } .btn-eye.b-b { width: 14px; height: 14px; }
 
-/* JOYSTICK (New) */
+/* JOYSTICK */
 #joystick-zone { width: 140px; height: 140px; border-radius: 50%; border: 2px dashed #333; position: relative; display: flex; align-items: center; justify-content: center; margin-top: 10px; }
 #stick { width: 50px; height: 50px; background: rgba(255,255,255,0.1); border: 1px solid var(--c); border-radius: 50%; box-shadow: 0 0 10px var(--glow); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
 .joy-label { position: absolute; bottom: -20px; font-size: 10px; color: #555; }
 
-/* MODALS */
+/* MENU STYLES */
 .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; }
 .menu-box { background: #111; border: 1px solid var(--c); box-shadow: 0 0 30px var(--glow); padding: 20px; width: 85%; max-width: 350px; text-align: left; border-radius: 10px; }
 .menu-header { color: var(--c); font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 5px; text-align: center; letter-spacing: 2px; }
 .menu-item { width: 100%; padding: 12px; border-bottom: 1px solid #222; color: #ccc; background: none; border: none; text-align: left; cursor: pointer; font-family: inherit; font-size: 14px; transition: 0.2s; }
 .menu-item:hover { color: var(--c); padding-left: 15px; }
 .menu-item.highlight { color: #000; background: var(--c); font-weight: bold; text-align: center; margin-top: 10px; border-radius: 5px; }
+.stop-btn { color: #ff0055 !important; }
+
+.system-section { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #222; color: #888; font-size: 12px; }
+.skin-selector { display: flex; gap: 5px; }
+.skin-btn { background: #222; border: 1px solid #444; color: #888; padding: 5px 10px; cursor: pointer; font-size: 10px; }
+.skin-btn.active { background: var(--c); color: #000; border-color: var(--c); }
+.s-xmas.active { background: #D42426; border-color: #D42426; color: white; }
+
+.rename-box { display: flex; margin-top: 10px; gap: 5px; }
+.rename-box input { background: #222; border: 1px solid #444; color: white; padding: 5px; flex: 1; font-family: inherit; }
+.rename-box button { background: var(--c); color: black; border: none; font-weight: bold; cursor: pointer; }
 .close-txt { margin-top: 15px; text-align: center; text-decoration: underline; color: #666; cursor: pointer; }
 .divider { height: 10px; }
 
@@ -72,14 +94,3 @@ canvas { background: #000; border: 1px solid #333; width: 100%; border-radius: 5
 input[type=range] { width: 100%; accent-color: var(--c); }
 .workshop-btns { display: flex; gap: 10px; }
 .menu-item.half { text-align: center; border: 1px solid #333; border-radius: 5px; }
-
-/* RENAME */
-.rename-box { display: flex; margin-top: 10px; gap: 5px; }
-.rename-box input { background: #222; border: 1px solid #444; color: white; padding: 5px; flex: 1; font-family: inherit; }
-.rename-box button { background: var(--c); color: black; border: none; font-weight: bold; cursor: pointer; }
-
-/* SKIN DOTS */
-.skin-selector { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
-.skin-dot { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; border: 1px solid #555; opacity: 0.5; }
-.skin-dot.active { opacity: 1; transform: scale(1.3); border-color: #fff; }
-.s-def { background: #00e5ff; } .s-xmas { background: #D42426; }
