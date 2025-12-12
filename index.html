@@ -70,6 +70,14 @@
             </div>
 
             <div class="tools-container">
+                <!-- NEW PRESET BUTTONS -->
+                <div class="preset-row" style="display:flex; gap:5px; margin-bottom:15px; flex-wrap:wrap;">
+                    <button class="tool-btn" onclick="loadPreset('incy')" style="flex:1">INCY</button>
+                    <button class="tool-btn" onclick="loadPreset('glitch')" style="flex:1">GLITCH</button>
+                    <button class="tool-btn" onclick="loadPreset('weaver')" style="flex:1">WEAVER</button>
+                    <button class="tool-btn" onclick="loadPreset('cyclops')" style="flex:1">CYCLOPS</button>
+                </div>
+
                 <div class="tool-row">
                     <button class="tool-btn" onclick="addEye()">+ ADD EYE</button>
                     <label class="check-label"><input type="checkbox" id="mirror-check" checked> MIRROR MODE</label>
