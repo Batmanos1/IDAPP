@@ -19,13 +19,11 @@
             <div class="header-area">
                 <h1 id="app-title">IDAPP</h1>
                 <div class="subtitle" id="app-type">UNIVERSAL CONTROLLER</div>
-                <!-- Status is the primary button when offline -->
                 <div id="status" onclick="connectBLE()">OFFLINE - TAP TO CONNECT</div>
                 <div id="coin-box" style="display:none; color: gold; margin-top:5px;">COINS: <span id="val-coins">0</span></div>
             </div>
 
             <div class="visor-container">
-                <!-- Visor is empty until JS populates it on connect -->
                 <div class="visor" id="visor"></div>
                 <div id="game-text" style="height:20px; margin-top:10px; font-size:12px; color:#fff;"></div>
             </div>
@@ -72,7 +70,7 @@
         </div>
     </div>
 
-    <!-- MODALS -->
+    <!-- DESIGNER MODAL -->
     <div id="designerModal">
         <div class="designer-panel">
             <div class="designer-header">
@@ -82,6 +80,12 @@
             
             <div class="preview-area">
                 <div class="visor preview-visor" id="preview-visor"></div>
+            </div>
+
+            <!-- NEW RENAME FIELD -->
+            <div class="rename-row">
+                <input type="text" id="robot-name-input" class="name-input" placeholder="ROBOT NAME" maxlength="15">
+                <button class="name-btn" onclick="renameRobot()">RENAME</button>
             </div>
 
             <div class="tools-container">
