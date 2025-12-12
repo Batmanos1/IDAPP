@@ -11,23 +11,32 @@
     <div id="nebula-bg"></div>
     <div id="snow-container"></div> 
 
+    <button id="btn-edit-face" onclick="openWorkshop()">✎ EDIT FACE</button>
     <button id="connect-btn" onclick="connectBLE()">CONNECT</button>
-    <div id="status" style="display:none;">OFFLINE</div>
-    <div id="connectOverlay" style="display:none;"></div>
-
-    <div class="top-bar">
-        <div id="coin-box" style="display:none;">COINS: <span id="val-coins">0</span></div>
-        <button class="weather-btn" id="btn-sync" onclick="syncWeather()">☁ SYNC WEATHER</button>
+    
+    <div id="vitals-container">
+        <div class="vital-row">
+            <span class="vital-label">HAP</span>
+            <div class="vital-bar-bg"><div id="bar-hap" class="vital-fill" style="width:50%; background:var(--g);"></div></div>
+            <span id="val-hap" class="vital-val">50%</span>
+        </div>
+        <div class="vital-row">
+            <span class="vital-label">HUN</span>
+            <div class="vital-bar-bg"><div id="bar-hun" class="vital-fill" style="width:80%; background:#ffcc00;"></div></div>
+            <span id="val-hun" class="vital-val">80%</span>
+        </div>
+        <div class="vital-row">
+            <span class="vital-label">ENG</span>
+            <div class="vital-bar-bg"><div id="bar-eng" class="vital-fill" style="width:100%; background:var(--c);"></div></div>
+            <span id="val-eng" class="vital-val">100%</span>
+        </div>
     </div>
 
     <div id="app-container">
         <div>
             <h1 id="app-title">IDAPP</h1>
             <div class="subtitle">UNIVERSAL CONTROLLER</div>
-            <div class="skin-selector">
-                <div class="skin-dot s-def active" onclick="setSkin('default')"></div>
-                <div class="skin-dot s-xmas" onclick="setSkin('christmas')"></div>
-            </div>
+            <div id="coin-box" style="display:none; margin-top:5px; font-weight:bold; color:var(--c);">COINS: <span id="val-coins">0</span></div>
         </div>
 
         <div class="visor-container">
@@ -45,7 +54,7 @@
                     <div class="btn-eye b-b"></div> <div class="btn-eye b-s"></div>
                 </div>
             </div>
-
+            
             <div id="joystick-zone">
                 <div id="stick"></div>
                 <div class="joy-label">JOYSTICK</div>
@@ -55,16 +64,26 @@
 
     <div id="menuModal" class="modal">
         <div class="menu-box">
-            <div class="menu-header">GAMES & TOOLS</div>
+            <div class="menu-header">SYSTEM & GAMES</div>
+            
+            <div class="system-section">
+                <label>THEME:</label>
+                <div class="skin-selector">
+                    <button class="skin-btn s-def active" onclick="setSkin('default')">DEFAULT</button>
+                    <button class="skin-btn s-xmas" onclick="setSkin('christmas')">X-MAS</button>
+                </div>
+            </div>
+
+            <button class="menu-item highlight" id="btn-sync" onclick="syncWeather()">☁ SYNC WEATHER</button>
+
+            <div class="divider"></div>
             
             <button class="menu-item" onclick="send('1'); closeMenu()">🧠 MEMORY GAME</button>
             <button class="menu-item" onclick="send('2'); closeMenu()">⚡ REFLEX GAME</button>
             <button class="menu-item" onclick="send('3'); closeMenu()">🎰 SLOTS GAME</button>
-            <button class="menu-item" onclick="stopGame()" style="color:#ff0055">🛑 STOP GAME</button>
+            <button class="menu-item stop-btn" onclick="stopGame()">🛑 STOP GAME</button>
             
             <div class="divider"></div>
-            
-            <button class="menu-item" onclick="openWorkshop(); closeMenu()">🎨 FACE EDITOR</button>
             
             <div class="rename-box">
                 <input type="text" id="rename-input" placeholder="RENAME ROBOT" maxlength="15">
@@ -77,7 +96,7 @@
 
     <div id="workshopModal" class="modal">
         <div class="menu-box workshop-box">
-            <div class="menu-header">FACE WORKSHOP</div>
+            <div class="menu-header">FACE EDITOR</div>
             <canvas id="face-canvas" width="256" height="128"></canvas>
             
             <div id="eye-controls" style="display:none;">
@@ -95,6 +114,9 @@
             <div class="close-txt" onclick="closeWorkshop()">CANCEL</div>
         </div>
     </div>
+
+    <div id="status" style="display:none;">OFFLINE</div>
+    <div id="connectOverlay" style="display:none;"></div>
 
     <script src="js/script.js"></script>
 </body>
