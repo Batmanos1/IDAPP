@@ -14,123 +14,158 @@
     <div id="edit-btn" onclick="openDesigner()">✎</div>
 
     <div id="connectOverlay" style="display:none;">
-        <div class="overlay-content">
-            <h2>CONNECTION LOST</h2>
-            <button onclick="connectBLE()" class="connect-btn">RECONNECT SYSTEM</button>
-        </div>
+        <div class="subtitle">SYSTEM OFFLINE</div>
+        <h1 style="font-size: 40px; margin: 0;">LOST</h1>
+        <button onclick="connectBLE()" class="connect-btn">ESTABLISH LINK</button>
     </div>
 
     <div id="app-container">
+        <!-- PAGE 1: CONTROLS -->
         <div class="page" id="p1">
             <div class="header-area">
                 <h1 id="app-title">IDAPP</h1>
                 <div class="subtitle" id="app-type">UNIVERSAL CONTROLLER</div>
-                <div id="status">OFFLINE</div>
-                <div id="coin-box" style="display:none;">COINS: <span id="val-coins">0</span></div>
+                <div id="status" style="font-size:10px; color:#444;">DISCONNECTED</div>
+                <div id="coin-box" style="display:none; color: gold; margin-top:5px;">COINS: <span id="val-coins">0</span></div>
             </div>
 
             <div class="visor-container">
-                <div class="visor mood-off" id="visor"> 
-                    </div>
-                <div id="game-text"></div>
+                <div class="visor mood-off" id="visor"></div>
+                <div id="game-text" style="height:20px; margin-top:10px; font-size:12px; color:#fff;"></div>
             </div>
 
+            <!-- REVAMPED BUTTONS: NO EYES, JUST CLEAN ICONS -->
             <div class="controls">
-                <div class="btn-round pink" id="btn-L" onpointerdown="btnDown(event, 'L')" onpointerup="btnUp(event, 'L')" onpointerleave="btnUp(event, 'L')" oncontextmenu="return false;">
-                    <span class="bracket">(</span> <div class="btn-eye b-s"></div> <div class="btn-eye b-b"></div> <span class="bracket">)</span>
+                <div class="btn-round" id="btn-L" onpointerdown="btnDown(event, 'L')" onpointerup="btnUp(event, 'L')" onpointerleave="btnUp(event, 'L')" oncontextmenu="return false;">
+                    <div class="btn-label">[ + ]</div>
                 </div>
-                <div class="btn-round menu-btn" onclick="openMenu()">MENU</div>
-                <div class="btn-round purp" id="btn-R" onpointerdown="btnDown(event, 'R')" onpointerup="btnUp(event, 'R')" onpointerleave="btnUp(event, 'R')" oncontextmenu="return false;">
-                    <span class="bracket">(</span> <div class="btn-eye b-b"></div> <div class="btn-eye b-s"></div> <span class="bracket">)</span>
+                
+                <div class="btn-round menu-btn" onclick="openMenu()">
+                    <span class="menu-lines"></span>
+                    <span class="menu-lines"></span>
+                    <span class="menu-lines"></span>
+                </div>
+
+                <div class="btn-round" id="btn-R" onpointerdown="btnDown(event, 'R')" onpointerup="btnUp(event, 'R')" onpointerleave="btnUp(event, 'R')" oncontextmenu="return false;">
+                    <div class="btn-label">[ + ]</div>
                 </div>
             </div>
+            
             <div class="hint">SWIPE UP FOR VITALS</div>
         </div>
 
+        <!-- PAGE 2: VITALS -->
         <div class="page" id="p2" style="background: transparent;">
             <div class="hint" style="margin-top:20px; transform: rotate(180deg);">SWIPE DOWN FOR CONTROLS</div>
             <div class="stats-content">
+                <div class="subtitle">BIOMETRIC DATA</div>
                 <h3>SYSTEM VITALS</h3>
-                <div class="bar-container"><div class="label"><span>HAPPINESS</span> <span id="val-hap">50%</span></div><div class="progress-bg"><div class="progress-fill" id="bar-hap" style="width: 50%"></div></div></div>
-                <div class="bar-container"><div class="label"><span>HUNGER</span> <span>80%</span></div><div class="progress-bg"><div class="progress-fill fill-p" style="width: 80%"></div></div></div>
-                <div class="bar-container"><div class="label"><span>ENERGY</span> <span id="val-eng">10%</span></div><div class="progress-bg"><div class="progress-fill fill-y" id="bar-eng" style="width: 10%"></div></div></div>
+                <div class="bar-container">
+                    <div class="label"><span>HAPPINESS</span> <span id="val-hap">50%</span></div>
+                    <div class="progress-bg"><div class="progress-fill" id="bar-hap" style="width: 50%"></div></div>
+                </div>
+                <div class="bar-container">
+                    <div class="label"><span>HUNGER</span> <span>80%</span></div>
+                    <div class="progress-bg"><div class="progress-fill" style="background: #ff0055; width: 80%"></div></div>
+                </div>
+                <div class="bar-container">
+                    <div class="label"><span>ENERGY</span> <span id="val-eng">10%</span></div>
+                    <div class="progress-bg"><div class="progress-fill" style="background: #ffaa00; width: 10%" id="bar-eng"></div></div>
+                </div>
             </div>
             <div style="flex-grow:1"></div>
         </div>
     </div>
 
+    <!-- COMPACT DESIGNER MODAL -->
     <div id="designerModal">
         <div class="designer-panel">
-            <div class="cat-header">OPTIC DESIGNER <span onclick="closeDesigner()" style="cursor:pointer">X</span></div>
+            <div class="designer-header">
+                <span style="letter-spacing:2px; font-size:12px; color:#fff;">OPTIC DESIGNER</span>
+                <span class="close-btn" onclick="closeDesigner()">×</span>
+            </div>
             
             <div class="preview-area">
-                <div class="visor preview-visor" id="preview-visor">
-                    </div>
-                <div class="preview-label">PREVIEW</div>
+                <div class="visor preview-visor" id="preview-visor"></div>
             </div>
 
             <div class="tools-container">
-                <!-- NEW PRESET BUTTONS -->
-                <div class="preset-row" style="display:flex; gap:5px; margin-bottom:15px; flex-wrap:wrap;">
-                    <button class="tool-btn" onclick="loadPreset('incy')" style="flex:1">INCY</button>
-                    <button class="tool-btn" onclick="loadPreset('glitch')" style="flex:1">GLITCH</button>
-                    <button class="tool-btn" onclick="loadPreset('weaver')" style="flex:1">WEAVER</button>
-                    <button class="tool-btn" onclick="loadPreset('cyclops')" style="flex:1">CYCLOPS</button>
+                <div class="preset-row">
+                    <button class="tool-btn" onclick="loadPreset('incy')">STD</button>
+                    <button class="tool-btn" onclick="loadPreset('glitch')">GLITCH</button>
+                    <button class="tool-btn" onclick="loadPreset('weaver')">WEAVER</button>
+                    <button class="tool-btn" onclick="loadPreset('cyclops')">CYCLOPS</button>
                 </div>
 
-                <div class="tool-row">
-                    <button class="tool-btn" onclick="addEye()">+ ADD EYE</button>
-                    <label class="check-label"><input type="checkbox" id="mirror-check" checked> MIRROR MODE</label>
+                <div style="display:flex; justify-content:space-between; margin:5px 0;">
+                    <button class="tool-btn" onclick="addEye()" style="flex:0 0 auto; width:100px;">+ NEW EYE</button>
+                    <label style="font-size:10px; display:flex; align-items:center; gap:5px; color:#888;">
+                        <input type="checkbox" id="mirror-check" checked> MIRROR
+                    </label>
                 </div>
 
-                <div class="selection-row" id="eye-selector">
-                    </div>
+                <div class="selection-row" id="eye-selector"></div>
 
+                <!-- 2 COLUMN GRID CONTROLS -->
                 <div class="sliders-area" id="controls-area">
                     <div class="slider-group">
-                        <label>WIDTH: <span id="val-w">30</span>px</label>
+                        <label>WIDTH <span id="val-w">30</span></label>
                         <input type="range" id="inp-w" min="5" max="60" oninput="updateEyeParam('w', this.value)">
                     </div>
                     <div class="slider-group">
-                        <label>HEIGHT: <span id="val-h">30</span>px</label>
+                        <label>HEIGHT <span id="val-h">30</span></label>
                         <input type="range" id="inp-h" min="5" max="60" oninput="updateEyeParam('h', this.value)">
                     </div>
                     <div class="slider-group">
-                        <label>ROUNDNESS: <span id="val-r">50</span>%</label>
+                        <label>ROUNDNESS <span id="val-r">50</span></label>
                         <input type="range" id="inp-r" min="0" max="50" oninput="updateEyeParam('r', this.value)">
                     </div>
                     <div class="slider-group">
-                        <label>POS X: <span id="val-x">0</span></label>
+                        <label>POS X <span id="val-x">0</span></label>
                         <input type="range" id="inp-x" min="-60" max="60" oninput="updateEyeParam('x', this.value)">
                     </div>
                     <div class="slider-group">
-                        <label>POS Y: <span id="val-y">0</span></label>
+                        <label>POS Y <span id="val-y">0</span></label>
                         <input type="range" id="inp-y" min="-30" max="30" oninput="updateEyeParam('y', this.value)">
                     </div>
-                    <button class="delete-btn" onclick="deleteSelectedEye()">DELETE SELECTED EYE</button>
                 </div>
             </div>
 
-            <button class="save-btn" onclick="saveAndUpload()">UPLOAD TO ROBOT</button>
+            <div class="action-row">
+                <button class="big-btn del-btn" onclick="deleteSelectedEye()">DELETE</button>
+                <button class="big-btn save-btn" onclick="saveAndUpload()">UPLOAD</button>
+            </div>
         </div>
     </div>
 
+    <!-- FULL SCREEN GLASS MENU -->
     <div id="menuModal">
-        <div class="menu-box">
-            <div class="cat-header" onclick="toggleCat('games')">GAMES PROTOCOLS <span>▼</span></div>
-            <div id="cat-games" class="cat-content">
-                <button class="menu-item" onclick="startGame('1')">MEMORY <span class="score-badge" id="hs-mem">HS: -</span></button>
-                <button class="menu-item" onclick="startGame('2')">REFLEX <span class="score-badge" id="hs-ref">HS: -</span></button>
-                <button class="menu-item" onclick="startGame('3')">SLOTS <span class="score-badge" id="hs-slot">STRK: -</span></button>
-                <button class="menu-item stop-btn" onclick="stopGame()">STOP CURRENT GAME</button>
+        <div class="menu-content">
+            <div class="menu-title">COMMAND PROTOCOLS</div>
+            
+            <div class="menu-option" onclick="startGame('1')">
+                MEMORY GAME <span id="hs-mem">HS: -</span>
             </div>
-            <div class="cat-header" onclick="toggleCat('sys')" style="margin-top:10px;">SYSTEM <span>▼</span></div>
-            <div id="cat-sys" class="cat-content">
-                <button class="menu-item" onclick="send('F')">BUY FOOD (10 COINS)</button>
-                <div class="menu-item">SOUND <label class="switch"><input type="checkbox" checked onchange="send('V')"><span class="slider round"></span></label></div>
-                <button class="menu-item" onclick="forceSleep()">FORCE SLEEP MODE</button>
+            <div class="menu-option" onclick="startGame('2')">
+                REFLEX GAME <span id="hs-ref">HS: -</span>
             </div>
-            <div class="close-txt" onclick="closeMenu()">[ CLOSE DATA PAD ]</div>
+            <div class="menu-option" onclick="startGame('3')">
+                SLOT MACHINE <span id="hs-slot">STRK: -</span>
+            </div>
+            <div class="menu-option" onclick="send('F')" style="border-color: #ffaa00; color: #ffaa00;">
+                FEED ROBOT <span>10 COINS</span>
+            </div>
+            <div class="menu-option" onclick="stopGame()" style="background:rgba(255,0,0,0.1); border-color: #500;">
+                TERMINATE ACTIVITY
+            </div>
+
+            <div class="menu-option" style="justify-content: center; margin-top:20px; border:none; background:transparent;">
+                <label style="font-size:12px; color:#888; display:flex; align-items:center; gap:10px;">
+                    MUTE SOUND <input type="checkbox" onchange="send('V')">
+                </label>
+            </div>
+
+            <div class="close-menu" onclick="closeMenu()">×</div>
         </div>
     </div>
 
