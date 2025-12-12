@@ -44,9 +44,13 @@ async function connectBLE() {
         charTX.addEventListener('characteristicvaluechanged', handleUpdate);
         
         // UI Updates on Connect
-        document.getElementById('status').innerText = "ONLINE"; 
-        document.getElementById('status').classList.add('on'); 
-        document.getElementById('connectOverlay').style.display = 'none';
+        let stat = document.getElementById('status');
+        if(stat) {
+            stat.innerText = "ONLINE"; 
+            stat.classList.add('on'); 
+        }
+        let ov = document.getElementById('connectOverlay');
+        if(ov) ov.style.display = 'none';
         
         // [NEW] Show Weather Box
         let wBox = document.getElementById('weather-box');
@@ -57,10 +61,16 @@ async function connectBLE() {
 }
 
 function onDisc() {
-    document.getElementById('status').innerText = "OFFLINE"; 
-    document.getElementById('status').classList.remove('on'); 
-    document.getElementById('connectOverlay').style.display = 'block'; 
-    document.getElementById('coin-box').style.display = 'none'; 
+    let stat = document.getElementById('status');
+    if(stat) {
+        stat.innerText = "OFFLINE"; 
+        stat.classList.remove('on'); 
+    }
+    let ov = document.getElementById('connectOverlay');
+    if(ov) ov.style.display = 'block'; 
+    
+    let cb = document.getElementById('coin-box');
+    if(cb) cb.style.display = 'none'; 
     
     // Hide Weather Box
     let wBox = document.getElementById('weather-box');
@@ -69,7 +79,8 @@ function onDisc() {
     document.getElementById('visor').className = "visor mood-off"; 
     document.body.className = ""; 
     document.body.classList.add('offline'); 
-    document.getElementById('nebula-bg').classList.remove('alive'); 
+    let bg = document.getElementById('nebula-bg');
+    if(bg) bg.classList.remove('alive'); 
     scrollToPage(1); 
     document.getElementById('visor').innerHTML = '';
 }
@@ -241,6 +252,8 @@ function setupVisorInteractions() {
     let dragStartTime = 0;
 
     const isEyeTarget = (t) => t.classList.contains('eye');
+    
+    if (!visor) return;
 
     visor.addEventListener('pointerdown', (e) => {
         isDragging = true;
@@ -344,12 +357,15 @@ function endJoy() { if (!isDraggingJoy) return; isDraggingJoy = false; stick.sty
 // --- SWIPE (Page Navigation) ---
 let startY = 0; const container = document.getElementById('app-container');
 function handleStart(y) { startY = y; }
-function handleEnd(y) { if (Math.abs(startY - y) > 50) { scrollToPage(startY > y ? 2 : 1); } }
+function handleEnd(y) { 
+    if(!container) return;
+    if (Math.abs(startY - y) > 50) { scrollToPage(startY > y ? 2 : 1); } 
+}
 document.addEventListener('touchstart', e => handleStart(e.touches[0].clientY), {passive: false});
 document.addEventListener('touchend', e => handleEnd(e.changedTouches[0].clientY), {passive: false});
 document.addEventListener('mousedown', e => handleStart(e.clientY));
 document.addEventListener('mouseup', e => handleEnd(e.clientY));
-function scrollToPage(p) { container.style.transform = p === 2 ? "translateY(-100vh)" : "translateY(0)"; }
+function scrollToPage(p) { if(container) container.style.transform = p === 2 ? "translateY(-100vh)" : "translateY(0)"; }
 
 // ==========================================
 //  WORKSHOP & EDITOR
@@ -372,6 +388,7 @@ function initCanvas() {
 }
 
 function drawFace() {
+    if(!ctx) return;
     ctx.fillStyle = "#000"; ctx.fillRect(0,0,256,128);
     let strokeColor = document.body.classList.contains('skin-christmas') ? "#ff3333" : robotBaseColor;
     let fillColor = document.body.classList.contains('skin-christmas') ? "#ff3333" : robotBaseColor;
@@ -392,6 +409,7 @@ function drawFace() {
 
 function renderLocalVisor(eyeList) {
     const visor = document.getElementById('visor');
+    if(!visor) return;
     visor.innerHTML = ''; 
     minEyeX = 1000; maxEyeX = -1000; minEyeY = 1000; maxEyeY = -1000;
     const scale = 2.2; 
@@ -419,6 +437,7 @@ function renderLocalVisor(eyeList) {
 
 function updateVisorGeometry() {
     const visor = document.getElementById('visor');
+    if(!visor) return;
     const paddingX = 40; const paddingY = 30; const minW = 100; const minH = 60;
     let contentW = (maxEyeX - minEyeX);
     let contentH = (maxEyeY - minEyeY);
@@ -473,6 +492,7 @@ window.uploadFace = function() {
 // Dragging Logic
 let draggingEye = null;
 function getPos(e) {
+    if(!canvas) return {x:0, y:0};
     const rect = canvas.getBoundingClientRect();
     const cX = e.touches ? e.touches[0].clientX : e.clientX;
     const cY = e.touches ? e.touches[0].clientY : e.clientY;
