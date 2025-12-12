@@ -21,7 +21,7 @@ window.addEventListener('load', () => {
     const saved = localStorage.getItem('idapp_design');
     if (saved) { customEyes = JSON.parse(saved); }
     
-    getWeather(); 
+    getWeather(); // Fetch for UI display
     onDisc(); // Force offline state on load
 });
 
@@ -304,6 +304,9 @@ async function connectBLE() {
         // [IMPORTANT] Render the eyes now that we are connected!
         renderEyesToMainVisor();
         
+        // [NEW] Send weather immediately upon connection
+        getWeather(); 
+
         lastInputTime = Date.now(); 
     } catch (e) { console.log(e); }
 }
