@@ -13,30 +13,24 @@
 
     <div id="edit-btn" onclick="openDesigner()">✎</div>
 
-    <div id="connectOverlay" style="display:none;">
-        <div class="subtitle">SYSTEM OFFLINE</div>
-        <h1 style="font-size: 40px; margin: 0;">LOST</h1>
-        <button onclick="connectBLE()" class="connect-btn">ESTABLISH LINK</button>
-    </div>
-
     <div id="app-container">
         <!-- PAGE 1: CONTROLS -->
         <div class="page" id="p1">
             <div class="header-area">
                 <h1 id="app-title">IDAPP</h1>
                 <div class="subtitle" id="app-type">UNIVERSAL CONTROLLER</div>
-                <div id="status" onclick="connectBLE()">TAP TO CONNECT</div>
+                <!-- Status is the primary button when offline -->
+                <div id="status" onclick="connectBLE()">OFFLINE - TAP TO CONNECT</div>
                 <div id="coin-box" style="display:none; color: gold; margin-top:5px;">COINS: <span id="val-coins">0</span></div>
             </div>
 
             <div class="visor-container">
                 <!-- Visor is empty until JS populates it on connect -->
-                <div class="visor mood-off" id="visor"></div>
+                <div class="visor" id="visor"></div>
                 <div id="game-text" style="height:20px; margin-top:10px; font-size:12px; color:#fff;"></div>
             </div>
 
             <div class="controls">
-                <!-- CLEAN BUTTONS: No inner eyes, just text/icons -->
                 <div class="btn-round" id="btn-L" onpointerdown="btnDown(event, 'L')" onpointerup="btnUp(event, 'L')" onpointerleave="btnUp(event, 'L')" oncontextmenu="return false;">
                     <div class="btn-label">[ + ]</div>
                 </div>
@@ -78,6 +72,7 @@
         </div>
     </div>
 
+    <!-- MODALS -->
     <div id="designerModal">
         <div class="designer-panel">
             <div class="designer-header">
@@ -140,29 +135,16 @@
     <div id="menuModal">
         <div class="menu-content">
             <div class="menu-title">COMMAND PROTOCOLS</div>
-            
-            <div class="menu-option" onclick="startGame('1')">
-                MEMORY GAME <span id="hs-mem">HS: -</span>
-            </div>
-            <div class="menu-option" onclick="startGame('2')">
-                REFLEX GAME <span id="hs-ref">HS: -</span>
-            </div>
-            <div class="menu-option" onclick="startGame('3')">
-                SLOT MACHINE <span id="hs-slot">STRK: -</span>
-            </div>
-            <div class="menu-option" onclick="send('F')" style="border-color: #ffaa00; color: #ffaa00;">
-                FEED ROBOT <span>10 COINS</span>
-            </div>
-            <div class="menu-option" onclick="stopGame()" style="background:rgba(255,0,0,0.1); border-color: #500;">
-                TERMINATE ACTIVITY
-            </div>
-
+            <div class="menu-option" onclick="startGame('1')">MEMORY GAME <span id="hs-mem">HS: -</span></div>
+            <div class="menu-option" onclick="startGame('2')">REFLEX GAME <span id="hs-ref">HS: -</span></div>
+            <div class="menu-option" onclick="startGame('3')">SLOT MACHINE <span id="hs-slot">STRK: -</span></div>
+            <div class="menu-option" onclick="send('F')" style="border-color: #ffaa00; color: #ffaa00;">FEED ROBOT <span>10 COINS</span></div>
+            <div class="menu-option" onclick="stopGame()" style="background:rgba(255,0,0,0.1); border-color: #500;">TERMINATE ACTIVITY</div>
             <div class="menu-option" style="justify-content: center; margin-top:20px; border:none; background:transparent;">
                 <label style="font-size:12px; color:#888; display:flex; align-items:center; gap:10px;">
                     MUTE SOUND <input type="checkbox" onchange="send('V')">
                 </label>
             </div>
-
             <div class="close-menu" onclick="closeMenu()">×</div>
         </div>
     </div>
