@@ -5,12 +5,11 @@ let currentHappiness = 50;
 const initialVitalStates = { hap: 50, hun: 80, eng: 10 };
 
 // --- DESIGNER STATE ---
-// [UPDATED] Smaller default sizes to fit physical robot screen (128x64)
 let customEyes = [
-    {id:0, w:15, h:15, r:50, x:-50, y:0},  // Left Outer (was 25)
-    {id:1, w:25, h:25, r:50, x:-20, y:0},  // Left Inner (was 35)
-    {id:2, w:25, h:25, r:50, x:20, y:0},   // Right Inner (was 35)
-    {id:3, w:15, h:15, r:50, x:50, y:0}    // Right Outer (was 25)
+    {id:0, w:15, h:15, r:50, x:-36, y:0},  // Left Outer (Moved from -50 to -36)
+    {id:1, w:25, h:25, r:50, x:-16, y:0},  // Left Inner (Moved from -20 to -16)
+    {id:2, w:25, h:25, r:50, x:16, y:0},   // Right Inner (Moved from 20 to 16)
+    {id:3, w:15, h:15, r:50, x:36, y:0}    // Right Outer (Moved from 50 to 36)
 ];
 let selectedEyeIndex = -1;
 
@@ -58,14 +57,24 @@ function closeDesigner() {
     renderEyesToMainVisor();
 }
 
+// [NEW] RENAME FUNCTION
+function renameRobot() {
+    let name = document.getElementById('robot-name-input').value;
+    if(name && name.length > 0) {
+        send('N:' + name);
+        // Temporarily update title immediately for feedback
+        document.getElementById('app-title').innerText = name.toUpperCase();
+        closeDesigner();
+    }
+}
+
 function loadPreset(name) {
     if(name === 'incy') {
-        // [UPDATED] Preset also updated to match smaller default sizes
         customEyes = [
-            {id:0, w:15, h:15, r:50, x:-50, y:0}, 
-            {id:1, w:25, h:25, r:50, x:-20, y:0},
-            {id:2, w:25, h:25, r:50, x:20, y:0},   
-            {id:3, w:15, h:15, r:50, x:50, y:0}
+            {id:0, w:15, h:15, r:50, x:-36, y:0}, 
+            {id:1, w:25, h:25, r:50, x:-16, y:0},
+            {id:2, w:25, h:25, r:50, x:16, y:0},   
+            {id:3, w:15, h:15, r:50, x:36, y:0}
         ];
     }
     else if(name === 'glitch') {
@@ -95,7 +104,6 @@ function loadPreset(name) {
 function renderEyesToMainVisor() {
     const v = document.getElementById('visor');
     v.innerHTML = '';
-    // Double Check: Do not render if offline
     if(document.body.classList.contains('offline')) return;
 
     customEyes.forEach(eye => {
@@ -153,7 +161,8 @@ function selectEye(idx) { selectedEyeIndex = idx; renderDesignerUI(); }
 
 function addEye() {
     if (customEyes.length >= 8) return; 
-    customEyes.push({id: Date.now(), w:30, h:30, r:50, x:0, y:0});
+    // [UPDATED] Default new eye is smaller (20x20) to fit screen better
+    customEyes.push({id: Date.now(), w:20, h:20, r:50, x:0, y:0});
     selectEye(customEyes.length - 1);
 }
 
@@ -337,7 +346,11 @@ function handleUpdate(event) {
 
     if (type === 'I') { 
         let idParts = data.split('|');
-        if(idParts[1]) document.getElementById('app-title').innerText = idParts[1].toUpperCase(); 
+        if(idParts[1]) {
+            document.getElementById('app-title').innerText = idParts[1].toUpperCase(); 
+            // [NEW] Populate Rename Field
+            document.getElementById('robot-name-input').value = idParts[1];
+        }
         if(idParts[0]) document.getElementById('app-type').innerText = "TYPE: " + idParts[0].toUpperCase(); 
         if(idParts[2]) document.getElementById('val-coins').innerText = idParts[2]; 
         
