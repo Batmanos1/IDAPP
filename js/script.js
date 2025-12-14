@@ -7,6 +7,13 @@ const initialVitalStates = { hap: 50, hun: 80, eng: 10 };
 // --- VISUAL SCALING FACTOR ---
 const S = 1.8; 
 
+// --- INTERACTION STATE ---
+let tapCount = 0;
+let tapTimer = null;
+let lastPetTime = 0;
+let dragStartX = 0;
+let totalDragDist = 0;
+
 // --- DESIGNER STATE ---
 // [UPDATED] Default Start: FluxGarage Style (2 Large Eyes)
 let customEyes = [
@@ -26,9 +33,91 @@ window.addEventListener('load', () => {
         userHasEdited = true; 
     }
     
+    initVisorInteraction(); 
     getWeather(); 
     onDisc(); 
 });
+
+// --- NEW VISOR INTERACTIONS ---
+function initVisorInteraction() {
+    const visor = document.getElementById('visor');
+    
+    // Mouse/Touch Handlers
+    const start = (x) => {
+        dragStartX = x;
+        totalDragDist = 0;
+    };
+    
+    const move = (x, y) => {
+        // 1. Calculate Eye Look Coordinates (Dynamic Tracking)
+        // Map screen pixels to robot coord range (-50 to 50)
+        let rect = visor.getBoundingClientRect();
+        let centerX = rect.left + rect.width / 2;
+        let centerY = rect.top + rect.height / 2;
+        
+        let lookX = Math.round((x - centerX) / (rect.width/2) * 50);
+        let lookY = Math.round((y - centerY) / (rect.height/2) * 30);
+        
+        // Clamp
+        if(lookX < -50) lookX = -50; if(lookX > 50) lookX = 50;
+        if(lookY < -30) lookY = -30; if(lookY > 30) lookY = 30;
+        
+        // Send Joystick Command (Eyes follow finger)
+        if(Date.now() - lastPetTime > 100) { // Throttle
+             send(`J:${lookX},${lookY}`);
+        }
+
+        // 2. Petting Detection (Scrubbing)
+        let dist = Math.abs(x - dragStartX);
+        if (dist > 5) {
+            totalDragDist += dist;
+            dragStartX = x; // reset for next delta
+        }
+        
+        // If moved enough, trigger "Pet"
+        if (totalDragDist > 100 && Date.now() - lastPetTime > 500) {
+            send('P'); // Send Pet Command (Happy)
+            lastPetTime = Date.now();
+            totalDragDist = 0;
+        }
+    };
+    
+    const end = () => {
+        // If barely moved, count as a TAP
+        if (totalDragDist < 10) {
+            handleVisorTap();
+        }
+        // Center eyes on release
+        setTimeout(() => send('J:0,0'), 200);
+    };
+
+    // Events
+    visor.addEventListener('touchstart', e => { start(e.touches[0].clientX); }, {passive: true});
+    visor.addEventListener('touchmove', e => { move(e.touches[0].clientX, e.touches[0].clientY); }, {passive: true});
+    visor.addEventListener('touchend', e => { end(); });
+    
+    visor.addEventListener('mousedown', e => { start(e.clientX); });
+    visor.addEventListener('mousemove', e => { if(e.buttons === 1) move(e.clientX, e.clientY); });
+    visor.addEventListener('mouseup', e => { end(); });
+}
+
+function handleVisorTap() {
+    tapCount++;
+    
+    // Clear previous timer if tapping fast
+    if (tapTimer) clearTimeout(tapTimer);
+    
+    tapTimer = setTimeout(() => {
+        if (tapCount >= 3) {
+            // ANGRY SHAKE (Rapid Taps)
+            send('A'); 
+        } else {
+            // BLINK / POKE (Single/Double Tap)
+            send('B'); 
+        }
+        tapCount = 0;
+    }, 400); // Wait 400ms to see if user taps more
+}
 
 // --- WEATHER ---
 async function getWeather() {
@@ -229,8 +318,36 @@ function updateVisorMood(happiness) {
     else if (happiness < 30) { v.classList.add('mood-angry'); document.body.classList.add('mood-angry'); }
 }
 
+// --- UPDATE HELPER ---
+function updateVitalsDisplay(hap, hun, eng) {
+    if(hap !== null) {
+        document.getElementById('val-hap').innerText = hap + "%";
+        document.getElementById('bar-hap').style.width = hap + "%";
+        currentHappiness = parseInt(hap);
+        updateVisorMood(currentHappiness);
+    }
+    if(hun !== null) {
+        // [UPDATED] Select specific bar for hunger (using class or selector)
+        let barHun = document.querySelector('.fill-p'); 
+        if(barHun) barHun.style.width = hun + "%";
+    }
+    if(eng !== null) {
+        let barEng = document.getElementById('bar-eng');
+        if(barEng) {
+            barEng.style.width = eng + "%";
+            document.getElementById('val-eng').innerText = eng + "%";
+        }
+    }
+}
+
 function updateBackgroundVitals(vitals) {
+    // This is the old/local vital update function, still useful for smooth transitions 
+    // but the real data now comes from 'updateVitalsDisplay'
     document.getElementById('bar-hap').style.width = vitals.hap + '%';
+    // Hunger is usually inverse visually in UI (Fullness), here assuming 0-100 is fullness
+    let barHun = document.querySelector('.fill-p'); 
+    if(barHun) barHun.style.width = vitals.hun + '%';
+    
     document.getElementById('bar-eng').style.width = (100 - vitals.eng) + '%';
     document.getElementById('val-eng').innerText = (100 - vitals.eng) + '%';
 }
@@ -290,6 +407,9 @@ let startY = 0;
 const container = document.getElementById('app-container');
 document.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: false});
 document.addEventListener('touchend', e => { 
+    // Ignore swipe if we just performed a visor drag/tap
+    if(document.activeElement === document.getElementById('visor')) return;
+    
     if(document.body.classList.contains('offline')) return; 
     if (Math.abs(startY - e.changedTouches[0].clientY) > 50) scrollToPage(startY > e.changedTouches[0].clientY ? 2 : 1); 
 }, {passive: false});
@@ -368,23 +488,32 @@ function handleUpdate(event) {
         if(idParts[0]) document.getElementById('app-type').innerText = "TYPE: " + idParts[0].toUpperCase(); 
         if(idParts[2]) document.getElementById('val-coins').innerText = idParts[2]; 
         
+        // [UPDATED] Parse Vitals from Identity Packet
+        // Index 9: Affection, 10: Hunger, 11: Energy
+        if(idParts.length >= 12) {
+            updateVitalsDisplay(idParts[9], idParts[10], idParts[11]);
+        }
+        
         renderEyesToMainVisor();
     }
+    else if (type === 'A') { // Affection Update
+        updateVitalsDisplay(data, null, null);
+    }
+    else if (type === 'N') { // Nutrition/Hunger Update
+        updateVitalsDisplay(null, data, null);
+    }
+    else if (type === 'E') { // Energy Update
+        updateVitalsDisplay(null, null, data);
+    }
+    // ... (Keep existing L, H, T, C, M logic) ...
     else if (type === 'L') {
         if (!userHasEdited) {
             let parts = data.split(',');
-            
-            let rVal = 50; 
-            if (parts.length > 4) rVal = parseInt(parts[4]);
-            if (isNaN(rVal)) rVal = 50;
-
+            let rVal = 50; if (parts.length > 4) rVal = parseInt(parts[4]); if (isNaN(rVal)) rVal = 50;
             let newEye = {
                 id: Date.now() + Math.random(),
-                x: parseInt(parts[0]) || 0,
-                y: parseInt(parts[1]) || 0,
-                w: parseInt(parts[2]) || 20,
-                h: parseInt(parts[3]) || 20,
-                r: rVal
+                x: parseInt(parts[0]) || 0, y: parseInt(parts[1]) || 0,
+                w: parseInt(parts[2]) || 20, h: parseInt(parts[3]) || 20, r: rVal
             };
             customEyes.push(newEye);
             renderEyesToMainVisor();
@@ -401,26 +530,15 @@ function handleUpdate(event) {
         let txtDiv = document.getElementById('game-text');
         txtDiv.innerText = data;
         txtDiv.style.opacity = '1';
-        
-        // [FIXED] Keep Score/Win/Lose Text Visible for 3 seconds
         if (data === "GAME OVER" || data === "WINNER!" || data.startsWith("WINNER") || data.includes("JACKPOT") || data === "LOSE!" || data.startsWith("TIME:") || data.includes("ms")) { 
             setTimeout(() => { 
                 isGameRunning = false; 
-                txtDiv.style.opacity = '0'; // Fade out
-                setTimeout(() => txtDiv.innerText = "", 500); // Clear text after fade
+                txtDiv.style.opacity = '0'; 
+                setTimeout(() => txtDiv.innerText = "", 500); 
             }, 3000); 
-        } else {
-            // Normal message fade (like "SPINNING...")
-            setTimeout(() => txtDiv.style.opacity = '0.7', 200);
-        }
+        } else { setTimeout(() => txtDiv.style.opacity = '0.7', 200); }
     }
     else if (type === 'C') { document.getElementById('val-coins').innerText = data; }
-    else if (type === 'A') { 
-        currentHappiness = parseInt(data);
-        initialVitalStates.hap = currentHappiness;
-        document.getElementById('bar-hap').style.width = currentHappiness + "%"; 
-        updateBackgroundVitals(initialVitalStates);
-    }
     else if (type === 'M') { 
         let num = parseInt(data);
         let v = document.getElementById('visor');
