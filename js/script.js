@@ -171,7 +171,8 @@ function selectEye(idx) { selectedEyeIndex = idx; renderDesignerUI(); }
 function addEye() {
     userHasEdited = true; 
     if (customEyes.length >= 8) return; 
-    customEyes.push({id: Date.now(), w:20, h:20, r:50, x:0, y:0});
+    // [UPDATED] Default Radius 10 (Rectangle) to match style
+    customEyes.push({id: Date.now(), w:20, h:20, r:10, x:0, y:0});
     selectEye(customEyes.length - 1);
 }
 
