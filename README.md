@@ -10,9 +10,10 @@ Project was inspired by the RoboEyes library by FluxGarage: https://github.com/F
 
 ## Key Features
 
-* **Web Bluetooth Connectivity:** Connects directly from Chrome, Edge, or Bluefy to an ESP32 microcontroller without a backend server.
+* **Web Bluetooth Connectivity:** Connects directly from your browser to an ESP32 microcontroller.
 * **Mood Sync:** The entire application theme (colors, animations, and the "Aurora" background) shifts instantly to match the robot's internal emotion (Happy, Angry, Tired, Love).
 * **Real-Time Vitals:** Monitors the robot's Happiness, Hunger, and Energy levels.
+* **Customization** Let's you controll the look and name of your robot.
 * **Game Console:** Launches and controls minigames running on the robot.
 * **PWA Core:** Installable to the home screen on iOS and Android with full-screen support (handles notches and dynamic islands natively).
 
