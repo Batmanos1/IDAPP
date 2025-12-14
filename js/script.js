@@ -401,8 +401,18 @@ function handleUpdate(event) {
         let txtDiv = document.getElementById('game-text');
         txtDiv.innerText = data;
         txtDiv.style.opacity = '1';
-        setTimeout(() => txtDiv.style.opacity = '0.7', 200);
-        if (data === "GAME OVER" || data === "WINNER!" || data === "LOSE!") { setTimeout(() => { isGameRunning = false; }, 1000); }
+        
+        // [FIXED] Keep Score/Win/Lose Text Visible for 3 seconds
+        if (data === "GAME OVER" || data === "WINNER!" || data.startsWith("WINNER") || data.includes("JACKPOT") || data === "LOSE!" || data.startsWith("TIME:") || data.includes("ms")) { 
+            setTimeout(() => { 
+                isGameRunning = false; 
+                txtDiv.style.opacity = '0'; // Fade out
+                setTimeout(() => txtDiv.innerText = "", 500); // Clear text after fade
+            }, 3000); 
+        } else {
+            // Normal message fade (like "SPINNING...")
+            setTimeout(() => txtDiv.style.opacity = '0.7', 200);
+        }
     }
     else if (type === 'C') { document.getElementById('val-coins').innerText = data; }
     else if (type === 'A') { 
