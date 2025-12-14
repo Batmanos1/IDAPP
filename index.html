@@ -11,7 +11,13 @@
 
     <div id="weather-widget">SCANNING...</div>
 
-    <div id="edit-btn" onclick="openDesigner()">✎</div>
+    <!-- NEW ICON -->
+    <div id="edit-btn" onclick="openDesigner()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+        </svg>
+    </div>
 
     <div id="app-container">
         <!-- PAGE 1: CONTROLS -->
@@ -82,7 +88,6 @@
                 <div class="visor preview-visor" id="preview-visor"></div>
             </div>
 
-            <!-- NEW RENAME FIELD -->
             <div class="rename-row">
                 <input type="text" id="robot-name-input" class="name-input" placeholder="ROBOT NAME" maxlength="15">
                 <button class="name-btn" onclick="renameRobot()">RENAME</button>
@@ -96,23 +101,30 @@
                     <button class="tool-btn" onclick="loadPreset('cyclops')">CYCLOPS</button>
                 </div>
 
+                <!-- EYES SECTION -->
                 <div style="display:flex; justify-content:space-between; margin:5px 0;">
                     <button class="tool-btn" onclick="addEye()" style="flex:0 0 auto; width:100px;">+ NEW EYE</button>
                     <label style="font-size:10px; display:flex; align-items:center; gap:5px; color:#888;">
                         <input type="checkbox" id="mirror-check" checked> MIRROR
                     </label>
                 </div>
-
                 <div class="selection-row" id="eye-selector"></div>
+
+                <!-- MOUTHS SECTION -->
+                <div style="display:flex; justify-content:space-between; margin-top:10px; margin-bottom:5px;">
+                    <button class="tool-btn" onclick="addMouth()" style="flex:0 0 auto; width:100px; border-color:#522; color:#a66;">+ NEW MOUTH</button>
+                    <div style="font-size:10px; color:#666;">MAX 3</div>
+                </div>
+                <div class="selection-row" id="mouth-selector"></div>
 
                 <div class="sliders-area" id="controls-area">
                     <div class="slider-group">
                         <label>WIDTH <span id="val-w">30</span></label>
-                        <input type="range" id="inp-w" min="5" max="60" oninput="updateEyeParam('w', this.value)">
+                        <input type="range" id="inp-w" min="5" max="80" oninput="updateEyeParam('w', this.value)">
                     </div>
                     <div class="slider-group">
                         <label>HEIGHT <span id="val-h">30</span></label>
-                        <input type="range" id="inp-h" min="5" max="60" oninput="updateEyeParam('h', this.value)">
+                        <input type="range" id="inp-h" min="2" max="60" oninput="updateEyeParam('h', this.value)">
                     </div>
                     <div class="slider-group">
                         <label>ROUNDNESS <span id="val-r">50</span></label>
@@ -130,7 +142,7 @@
             </div>
 
             <div class="action-row">
-                <button class="big-btn del-btn" onclick="deleteSelectedEye()">DELETE</button>
+                <button class="big-btn del-btn" onclick="deleteSelectedObj()">DELETE</button>
                 <button class="big-btn save-btn" onclick="saveAndUpload()">UPLOAD</button>
             </div>
         </div>
