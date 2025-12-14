@@ -8,11 +8,12 @@ const initialVitalStates = { hap: 50, hun: 80, eng: 10 };
 const S = 1.8; 
 
 // --- INTERACTION STATE ---
-let tapCount = 0;
-let tapTimer = null;
+let hitStreak = 0;
+let hitResetTimer = null;
 let lastPetTime = 0;
 let dragStartX = 0;
 let totalDragDist = 0;
+let isTouchingEye = false;
 
 // --- DESIGNER STATE ---
 // [UPDATED] Default Start: FluxGarage Style (2 Large Eyes)
@@ -33,7 +34,7 @@ window.addEventListener('load', () => {
         userHasEdited = true; 
     }
     
-    initVisorInteraction(); 
+    initVisorInteraction(); // [NEW] Start Touch Listeners
     getWeather(); 
     onDisc(); 
 });
@@ -43,80 +44,90 @@ function initVisorInteraction() {
     const visor = document.getElementById('visor');
     
     // Mouse/Touch Handlers
-    const start = (x) => {
-        dragStartX = x;
+    const start = (e, clientX) => {
+        dragStartX = clientX;
         totalDragDist = 0;
+        
+        // Detect if we touched an EYE or the VISOR BACKGROUND
+        if (e.target.classList.contains('eye')) {
+            isTouchingEye = true;
+        } else {
+            isTouchingEye = false;
+        }
     };
     
-    const move = (x, y) => {
+    const move = (clientX, clientY) => {
         // 1. Calculate Eye Look Coordinates (Dynamic Tracking)
         // Map screen pixels to robot coord range (-50 to 50)
         let rect = visor.getBoundingClientRect();
         let centerX = rect.left + rect.width / 2;
         let centerY = rect.top + rect.height / 2;
         
-        let lookX = Math.round((x - centerX) / (rect.width/2) * 50);
-        let lookY = Math.round((y - centerY) / (rect.height/2) * 30);
+        let lookX = Math.round((clientX - centerX) / (rect.width/2) * 50);
+        let lookY = Math.round((clientY - centerY) / (rect.height/2) * 30);
         
         // Clamp
         if(lookX < -50) lookX = -50; if(lookX > 50) lookX = 50;
         if(lookY < -30) lookY = -30; if(lookY > 30) lookY = 30;
         
-        // Send Joystick Command (Eyes follow finger)
-        if(Date.now() - lastPetTime > 100) { // Throttle
+        // Always look at finger/mouse
+        if(Date.now() - lastPetTime > 100) { 
              send(`J:${lookX},${lookY}`);
         }
 
-        // 2. Petting Detection (Scrubbing)
-        let dist = Math.abs(x - dragStartX);
-        if (dist > 5) {
-            totalDragDist += dist;
-            dragStartX = x; // reset for next delta
-        }
-        
-        // If moved enough, trigger "Pet"
-        if (totalDragDist > 100 && Date.now() - lastPetTime > 500) {
-            send('P'); // Send Pet Command (Happy)
-            lastPetTime = Date.now();
-            totalDragDist = 0;
+        // 2. Petting Detection (ONLY if NOT touching an eye)
+        if (!isTouchingEye) {
+            let dist = Math.abs(clientX - dragStartX);
+            if (dist > 5) {
+                totalDragDist += dist;
+                dragStartX = clientX; 
+            }
+            
+            // Threshold for a "Pet" action
+            if (totalDragDist > 150 && Date.now() - lastPetTime > 500) {
+                send('P'); // Happy/Purr
+                lastPetTime = Date.now();
+                totalDragDist = 0;
+            }
         }
     };
     
     const end = () => {
-        // If barely moved, count as a TAP
+        // If we barely moved, interpret as a TAP
         if (totalDragDist < 10) {
-            handleVisorTap();
+            // [UPDATED] Trigger Hit regardless of where we tapped in the visor
+            // "In the visor is the poking/hitting"
+            triggerEyeHit();
         }
-        // Center eyes on release
+        
+        // Center eyes shortly after release
         setTimeout(() => send('J:0,0'), 200);
     };
 
     // Events
-    visor.addEventListener('touchstart', e => { start(e.touches[0].clientX); }, {passive: true});
+    visor.addEventListener('touchstart', e => { start(e, e.touches[0].clientX); }, {passive: true});
     visor.addEventListener('touchmove', e => { move(e.touches[0].clientX, e.touches[0].clientY); }, {passive: true});
     visor.addEventListener('touchend', e => { end(); });
     
-    visor.addEventListener('mousedown', e => { start(e.clientX); });
+    visor.addEventListener('mousedown', e => { start(e, e.clientX); });
     visor.addEventListener('mousemove', e => { if(e.buttons === 1) move(e.clientX, e.clientY); });
     visor.addEventListener('mouseup', e => { end(); });
 }
 
-function handleVisorTap() {
-    tapCount++;
+function triggerEyeHit() {
+    hitStreak++;
     
-    // Clear previous timer if tapping fast
-    if (tapTimer) clearTimeout(tapTimer);
-    
-    tapTimer = setTimeout(() => {
-        if (tapCount >= 3) {
-            // ANGRY SHAKE (Rapid Taps)
-            send('A'); 
-        } else {
-            // BLINK / POKE (Single/Double Tap)
-            send('B'); 
-        }
-        tapCount = 0;
-    }, 400); // Wait 400ms to see if user taps more
+    // Reset streak if we stop hitting for 2 seconds
+    if (hitResetTimer) clearTimeout(hitResetTimer);
+    hitResetTimer = setTimeout(() => { hitStreak = 0; }, 2000);
+
+    // If tapped 3 times quickly, get MAD
+    if (hitStreak >= 3) {
+        send('A'); // Angry Shake!
+        hitStreak = 0; 
+    } else {
+        send('B'); // Hit/Blink response
+    }
 }
 
 // --- WEATHER ---
@@ -165,7 +176,6 @@ function renameRobot() {
 function loadPreset(name) {
     userHasEdited = true; 
     if(name === 'incy') {
-        // [UPDATED] Now the "FluxGarage" Standard (2 Eyes)
         customEyes = [
             {id:0, w:36, h:48, r:10, x:-32, y:0}, 
             {id:1, w:36, h:48, r:10, x:32, y:0}
@@ -179,7 +189,6 @@ function loadPreset(name) {
         ];
     }
     else if(name === 'weaver') {
-        // [UPDATED] Now the "4 Basic Eyes" (Old Incy Layout)
         customEyes = [
             {id:0, w:15, h:15, r:50, x:-36, y:0}, 
             {id:1, w:25, h:25, r:50, x:-16, y:0},
@@ -327,7 +336,6 @@ function updateVitalsDisplay(hap, hun, eng) {
         updateVisorMood(currentHappiness);
     }
     if(hun !== null) {
-        // [UPDATED] Select specific bar for hunger (using class or selector)
         let barHun = document.querySelector('.fill-p'); 
         if(barHun) barHun.style.width = hun + "%";
     }
@@ -341,13 +349,9 @@ function updateVitalsDisplay(hap, hun, eng) {
 }
 
 function updateBackgroundVitals(vitals) {
-    // This is the old/local vital update function, still useful for smooth transitions 
-    // but the real data now comes from 'updateVitalsDisplay'
     document.getElementById('bar-hap').style.width = vitals.hap + '%';
-    // Hunger is usually inverse visually in UI (Fullness), here assuming 0-100 is fullness
     let barHun = document.querySelector('.fill-p'); 
     if(barHun) barHun.style.width = vitals.hun + '%';
-    
     document.getElementById('bar-eng').style.width = (100 - vitals.eng) + '%';
     document.getElementById('val-eng').innerText = (100 - vitals.eng) + '%';
 }
@@ -530,13 +534,18 @@ function handleUpdate(event) {
         let txtDiv = document.getElementById('game-text');
         txtDiv.innerText = data;
         txtDiv.style.opacity = '1';
+        
+        // [FIXED] Keep Score/Win/Lose Text Visible for 3 seconds
         if (data === "GAME OVER" || data === "WINNER!" || data.startsWith("WINNER") || data.includes("JACKPOT") || data === "LOSE!" || data.startsWith("TIME:") || data.includes("ms")) { 
             setTimeout(() => { 
                 isGameRunning = false; 
-                txtDiv.style.opacity = '0'; 
-                setTimeout(() => txtDiv.innerText = "", 500); 
+                txtDiv.style.opacity = '0'; // Fade out
+                setTimeout(() => txtDiv.innerText = "", 500); // Clear text after fade
             }, 3000); 
-        } else { setTimeout(() => txtDiv.style.opacity = '0.7', 200); }
+        } else {
+            // Normal message fade (like "SPINNING...")
+            setTimeout(() => txtDiv.style.opacity = '0.7', 200);
+        }
     }
     else if (type === 'C') { document.getElementById('val-coins').innerText = data; }
     else if (type === 'M') { 
