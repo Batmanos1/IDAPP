@@ -1,27 +1,27 @@
-const btnState = { L: { repeat: null, tapCount: 0, tapTimer: null }, R: { repeat: null, tapCount: 0, tapTimer: null } };
-let isGameRunning = false; 
-let lastInputTime = Date.now(); 
-let currentHappiness = 50; 
-const initialVitalStates = { hap: 50, hun: 80, eng: 10 };
+var btnState = { L: { repeat: null, tapCount: 0, tapTimer: null }, R: { repeat: null, tapCount: 0, tapTimer: null } };
+var isGameRunning = false; 
+var lastInputTime = Date.now(); 
+var currentHappiness = 50; 
+var initialVitalStates = { hap: 50, hun: 80, eng: 10 };
 
-const S = 1.8; 
+var S = 1.8; 
 
-let hitStreak = 0;
-let hitResetTimer = null;
-let lastPetTime = 0;
-let dragStartX = 0;
-let totalDragDist = 0;
-let isTouchingEye = false;
+var hitStreak = 0;
+var hitResetTimer = null;
+var lastPetTime = 0;
+var dragStartX = 0;
+var totalDragDist = 0;
+var isTouchingEye = false;
 
 // --- DESIGNER STATE ---
-let customEyes = [
+var customEyes = [
     {id:0, w:36, h:48, r:10, x:-32, y:0},  
     {id:1, w:36, h:48, r:10, x:32, y:0}    
 ];
-let customMouths = []; 
-let selectedEyeIndex = -1;
-let selectedMouthIndex = -1; 
-let userHasEdited = false;
+var customMouths = []; 
+var selectedEyeIndex = -1;
+var selectedMouthIndex = -1; 
+var userHasEdited = false;
 
 window.addEventListener('load', () => { 
     setInterval(checkIdleStatus, 1000); 
@@ -128,7 +128,13 @@ async function getWeather() {
             if (code > 50 && code < 70) { desc = "RAIN"; type = 1; }
             else if (code >= 70) { desc = "SNOW"; type = 1; }
             wDiv.innerText = `${desc} ${temp}°C`;
-            if(charRX) send(`W:${temp},${type}`);
+            
+            // Only send if we are connected
+            if(charRX) {
+                // Send weather data to robot
+                send(`W:${temp},${type}`);
+                console.log(`Weather Synced: ${desc} ${temp}°C`);
+            }
         } catch (e) { wDiv.innerText = "OFFLINE"; }
     });
 }
@@ -299,6 +305,7 @@ function updateVisorMood(happiness) {
     v.className = "visor"; document.body.className = "";
     if (happiness > 60) { v.classList.add('mood-happy'); document.body.classList.add('mood-happy'); } 
     else if (happiness < 30) { v.classList.add('mood-angry'); document.body.classList.add('mood-angry'); }
+    else if (happiness > 90) { v.classList.add('mood-love'); document.body.classList.add('mood-love'); } // Added mood-love if needed
 }
 
 function updateBackgroundVitals(vitals) {
@@ -349,8 +356,10 @@ document.addEventListener('touchstart', e => { startY = e.touches[0].clientY; },
 document.addEventListener('touchend', e => { if(document.activeElement === document.getElementById('visor')) return; if(document.body.classList.contains('offline')) return; if (Math.abs(startY - e.changedTouches[0].clientY) > 50) scrollToPage(startY > e.changedTouches[0].clientY ? 2 : 1); }, {passive: false});
 function scrollToPage(p) { container.style.transform = p === 2 ? "translateY(-100dvh)" : "translateY(0)"; }
 
-const sUUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e"; const cRX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"; const cTX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
-let dev, serv, charRX;
+var sUUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e"; 
+var cRX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"; 
+var cTX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+var dev, serv, charRX;
 
 async function connectBLE() {
     try {
@@ -364,11 +373,24 @@ async function connectBLE() {
         charTX.addEventListener('characteristicvaluechanged', handleUpdate);
         
         document.body.classList.remove('offline'); 
-        document.getElementById('status').innerText = "ONLINE"; document.getElementById('status').style.pointerEvents = "none"; document.getElementById('status').style.color = "#00ff88";
+
+        document.getElementById('status').innerText = "ONLINE"; 
+        document.getElementById('status').style.pointerEvents = "none"; 
+        document.getElementById('status').style.color = "#00ff88";
         document.getElementById('coin-box').style.display = 'block';
         document.getElementById('visor').classList.remove('mood-off');
+
+        // [UPDATED] SYNC SEQUENCE
+        // 1. Sync Time first and WAIT
+        await syncTime();
+
+        // 2. Small breathing room for BLE (300ms)
+        await new Promise(r => setTimeout(r, 300));
+
+        // 3. Sync Weather
+        getWeather(); 
         
-        renderEyesToMainVisor(); getWeather(); 
+        renderEyesToMainVisor(); 
         if (userHasEdited) { setTimeout(() => { if(customEyes.length > 0) saveAndUpload(); }, 1500); }
         lastInputTime = Date.now(); 
     } catch (e) { console.log(e); }
@@ -380,6 +402,26 @@ function onDisc() {
     document.getElementById('coin-box').style.display = 'none';
     document.getElementById('visor').className = "visor"; document.getElementById('visor').innerHTML = '';
     scrollToPage(1);
+}
+
+// [NEW] CLOCK FUNCTIONS
+function startClockMode() {
+    syncTime(); 
+    setTimeout(() => {
+        send('4'); 
+        isGameRunning = true; 
+        closeMenu();
+    }, 300);
+}
+
+// [UPDATED] MADE ASYNC TO PREVENT OVERLAP
+async function syncTime() {
+    const d = new Date();
+    const h = d.getHours();
+    const m = d.getMinutes();
+    // Return the promise so we can await it
+    await send(`T:${h}:${m}`);
+    console.log(`Time Synced: ${h}:${m}`);
 }
 
 async function send(cmd) { if(!charRX) return; if (navigator.vibrate) navigator.vibrate(15); await charRX.writeValue(new TextEncoder().encode(cmd)); }
